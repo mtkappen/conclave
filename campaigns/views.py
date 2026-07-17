@@ -668,7 +668,7 @@ def get_chat_messages(request, campaign_pk):
                 'is_edited': msg.is_edited,
                 'created_at': msg.created_at.strftime('%Y-%m-%d %H:%M:%S'),
                 'formatted_time': msg.created_at.strftime('%b %d, %H:%M'),
-                'is_spectator': membership.role == 'SPECTATOR',
+                'is_spectator': membership.role == 'SPECTATOR' if membership else False,
                 'is_dm_whisper_to_me': is_dm_whisper_to_me,
             })
 
