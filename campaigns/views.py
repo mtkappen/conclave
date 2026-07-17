@@ -592,7 +592,10 @@ def get_chat_messages(request, campaign_pk):
         # Filter based on visibility type and user role
         # Note: Superusers with campaign membership are treated as their assigned role (DM/Player/Spectator)
         # Only superusers WITHOUT membership get admin override access
-        if membership.role == 'DM':
+        
+        user_role = getattr(membership, 'role', None)
+        
+        if user_role == 'DM':
             # DMs see everything in their campaign
             visible_messages = visible_messages.order_by('created_at')
         elif request.user.is_superuser and is_admin_viewing:
@@ -609,9 +612,9 @@ def get_chat_messages(request, campaign_pk):
             
             base_query = Q(visibility_type='PUBLIC') | Q(sender=request.user)
             
-            # Add DM_ONLY conditions
+            # Add DM_ONLY conditions (sender can see their own DM whispers)
+            # Note: Old single-recipient field removed, so we only check sender
             base_query |= Q(visibility_type='DM_ONLY', sender=request.user)
-            base_query |= Q(visibility_type='DM_ONLY', recipient=request.user)
             
             # Add SECRET_WHISPER condition
             base_query |= Q(visibility_type='SECRET_WHISPER', recipients=request.user)
@@ -648,7 +651,9 @@ def get_chat_messages(request, campaign_pk):
             # Check if this is a whisper to the current user (DM_ONLY or SECRET_WHISPER)
             is_dm_whisper_to_me = False
             if msg.visibility_type == 'DM_ONLY':
-                is_dm_whisper_to_me = (msg.recipient == request.user)
+                # DM_ONLY messages are visible to sender and the campaign DM
+                # For backwards compatibility, we can't check recipient field anymore
+                is_dm_whisper_to_me = (msg.sender == request.user)  # Sender always sees their own
             elif msg.visibility_type == 'SECRET_WHISPER':
                 is_dm_whisper_to_me = msg.recipients.filter(id=request.user.id).exists()
             
