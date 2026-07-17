@@ -655,11 +655,22 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Chat resize functionality
+let chatResizeState = {
+    isResizing: false,
+    startY: 0,
+    startHeight: 0,
+    chatMessages: null,
+    resizeHandle: null
+};
+
 function initializeChatResize() {
     const chatMessages = document.getElementById('chatMessages');
     const resizeHandle = document.getElementById('chatResizeHandle');
     
     if (!chatMessages || !resizeHandle) return;
+    
+    chatResizeState.chatMessages = chatMessages;
+    chatResizeState.resizeHandle = resizeHandle;
     
     // Load saved height from localStorage
     const savedHeight = localStorage.getItem('chatMessagesHeight');
@@ -667,46 +678,52 @@ function initializeChatResize() {
         chatMessages.style.height = savedHeight;
     }
     
-    let isResizing = false;
+    resizeHandle.addEventListener('mousedown', startResize);
+}
+
+function startResize(e) {
+    e.preventDefault();
+    e.stopPropagation();
     
-    resizeHandle.addEventListener('mousedown', function(e) {
-        e.preventDefault();
-        isResizing = true;
-        resizeHandle.style.backgroundColor = '#007acc';
-        
-        document.addEventListener('mousemove', handleResize);
-        document.addEventListener('mouseup', stopResize);
-    });
+    chatResizeState.isResizing = true;
+    chatResizeState.startY = e.clientY;
+    chatResizeState.startHeight = parseInt(chatResizeState.chatMessages.style.height || 500, 10);
+    chatResizeState.resizeHandle.style.backgroundColor = '#007acc';
     
-    function handleResize(e) {
-        if (!isResizing) return;
-        
-        const containerRect = chatMessages.parentElement.getBoundingClientRect();
-        const newHeight = containerRect.bottom - e.clientY;
-        
-        // Min height: 300px, Max height: 80vh
-        const minHeight = 300;
-        const maxHeight = window.innerHeight * 0.8;
-        
-        if (newHeight >= minHeight && newHeight <= maxHeight) {
-            chatMessages.style.height = newHeight + 'px';
-        }
+    document.addEventListener('mousemove', doResize);
+    document.addEventListener('mouseup', endResize);
+}
+
+function doResize(e) {
+    if (!chatResizeState.isResizing || !chatResizeState.chatMessages) return;
+    
+    const deltaY = chatResizeState.startY - e.clientY;
+    let newHeight = chatResizeState.startHeight + deltaY;
+    
+    // Min height: 300px, Max height: 80vh
+    const minHeight = 300;
+    const maxHeight = window.innerHeight * 0.8;
+    
+    if (newHeight < minHeight) newHeight = minHeight;
+    if (newHeight > maxHeight) newHeight = maxHeight;
+    
+    chatResizeState.chatMessages.style.height = newHeight + 'px';
+}
+
+function endResize() {
+    if (!chatResizeState.isResizing) return;
+    
+    chatResizeState.isResizing = false;
+    chatResizeState.resizeHandle.style.backgroundColor = '';
+    
+    // Save height to localStorage
+    const currentHeight = chatResizeState.chatMessages.style.height;
+    if (currentHeight) {
+        localStorage.setItem('chatMessagesHeight', currentHeight);
     }
     
-    function stopResize() {
-        if (!isResizing) return;
-        isResizing = false;
-        resizeHandle.style.backgroundColor = '';
-        
-        // Save height to localStorage
-        const currentHeight = chatMessages.style.height;
-        if (currentHeight) {
-            localStorage.setItem('chatMessagesHeight', currentHeight);
-        }
-        
-        document.removeEventListener('mousemove', handleResize);
-        document.removeEventListener('mouseup', stopResize);
-    }
+    document.removeEventListener('mousemove', doResize);
+    document.removeEventListener('mouseup', endResize);
 }
 
 function startAutoRefresh() {
