@@ -555,8 +555,9 @@ def delete_character(request, pk):
 @login_required
 def get_chat_messages(request, campaign_pk):
     """Fetch chat messages for a campaign with visibility filtering."""
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+    try:
+        campaign = get_object_or_404(Campaign, pk=campaign_pk)
+        membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
     
     # Get user's current party group if in split mode
     user_group = None
@@ -568,8 +569,8 @@ def get_chat_messages(request, campaign_pk):
         except:
             pass
     
-    # Base query for visible messages
-    visible_messages = ChatMessage.objects.filter(campaign=campaign)
+    # Base query for visible messages with prefetch to avoid N+1 queries
+    visible_messages = ChatMessage.objects.filter(campaign=campaign).prefetch_related('recipients')
     
     # Filter based on visibility type and user role
     # Note: Superusers with campaign membership are treated as their assigned role (DM/Player/Spectator)
@@ -669,6 +670,10 @@ def get_chat_messages(request, campaign_pk):
         'user_role': membership.role,
         'has_character': Character.objects.filter(user=request.user, campaign=campaign).exists(),
     })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'Server error loading messages: {str(e)}'}, status=500)
 
 
 @login_required
