@@ -558,118 +558,118 @@ def get_chat_messages(request, campaign_pk):
     try:
         campaign = get_object_or_404(Campaign, pk=campaign_pk)
         membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
-    
-    # Get user's current party group if in split mode
-    user_group = None
-    if membership.role == 'PLAYER':
-        try:
-            group_member = PartyGroupMember.objects.filter(user=request.user).first()
-            if group_member and group_member.group.campaign == campaign:
-                user_group = group_member.group
-        except:
-            pass
-    
-    # Base query for visible messages with prefetch to avoid N+1 queries
-    visible_messages = ChatMessage.objects.filter(campaign=campaign).prefetch_related('recipients')
-    
-    # Filter based on visibility type and user role
-    # Note: Superusers with campaign membership are treated as their assigned role (DM/Player/Spectator)
-    # Only superusers WITHOUT membership get admin override access
-    if membership.role == 'DM':
-        # DMs see everything in their campaign
-        visible_messages = visible_messages.order_by('created_at')
-    elif request.user.is_superuser and is_admin_viewing:
-        # Superuser viewing without membership - can see everything (admin mode)
-        visible_messages = visible_messages.order_by('created_at')
-    else:
-        # Players and Spectators have restrictions
-        # They can see:
-        # 1. PUBLIC messages (everyone)
-        # 2. Their own messages regardless of visibility type  
-        # 3. DM_ONLY messages sent TO them or FROM them (to DM)
-        # 4. SECRET_WHISPER messages where they are a recipient
-        # 5. SPLIT_GROUP messages for their group
-        
-        base_query = Q(visibility_type='PUBLIC') | Q(sender=request.user)
-        
-        # Add DM_ONLY conditions
-        base_query |= Q(visibility_type='DM_ONLY', sender=request.user)
-        base_query |= Q(visibility_type='DM_ONLY', recipient=request.user)
-        
-        # Add SECRET_WHISPER condition
-        base_query |= Q(visibility_type='SECRET_WHISPER', recipients=request.user)
-        
-        # Add SPLIT_GROUP condition if applicable
-        if user_group:
-            base_query |= Q(visibility_type='SPLIT_GROUP', party_group=user_group)
-        
-        visible_messages = visible_messages.filter(base_query).order_by('created_at')
-    
-    # Get dice rolls (public only for non-DMs)
-    if membership.role == 'DM':
-        dice_rolls = DiceRollLog.objects.filter(campaign=campaign).order_by('created_at')
-    else:
-        dice_rolls = DiceRollLog.objects.filter(campaign=campaign, visibility='PUBLIC').order_by('created_at')
-    
-    # Serialize messages
-    message_list = []
-    for msg in visible_messages[:50]:  # Limit to last 50 messages
-        # Use stored name for archival (preserves original username even if deleted)
-        sender_name = msg.get_sender_display_name()
-        sender_id = msg.sender.id if msg.sender else None
-        
-        # Determine display name based on message type (only for current user's messages)
-        display_sender_name = sender_name
-        if msg.message_type == 'IC' and membership.role == 'PLAYER' and msg.sender == request.user:
-            # Show character name for IC messages
+
+        # Get user's current party group if in split mode
+        user_group = None
+        if membership.role == 'PLAYER':
             try:
-                char = Character.objects.get(user=request.user, campaign=campaign)
-                display_sender_name = char.name
-            except Character.DoesNotExist:
+                group_member = PartyGroupMember.objects.filter(user=request.user).first()
+                if group_member and group_member.group.campaign == campaign:
+                    user_group = group_member.group
+            except:
                 pass
-        
-        # Check if this is a whisper to the current user (DM_ONLY or SECRET_WHISPER)
-        is_dm_whisper_to_me = False
-        if msg.visibility_type == 'DM_ONLY':
-            is_dm_whisper_to_me = (msg.recipient == request.user)
-        elif msg.visibility_type == 'SECRET_WHISPER':
-            is_dm_whisper_to_me = msg.recipients.filter(id=request.user.id).exists()
-        
-        message_list.append({
-            'id': msg.id,
-            'content': msg.content,
-            'sender_id': sender_id,
-            'sender_name': display_sender_name,
-            'real_sender_name': sender_name,
-            'visibility_type': msg.visibility_type,
-            'message_type': msg.message_type,
-            'is_edited': msg.is_edited,
-            'created_at': msg.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-            'formatted_time': msg.created_at.strftime('%b %d, %H:%M'),
-            'is_spectator': membership.role == 'SPECTATOR',
-            'is_dm_whisper_to_me': is_dm_whisper_to_me,
+
+        # Base query for visible messages with prefetch to avoid N+1 queries
+        visible_messages = ChatMessage.objects.filter(campaign=campaign).prefetch_related('recipients')
+
+        # Filter based on visibility type and user role
+        # Note: Superusers with campaign membership are treated as their assigned role (DM/Player/Spectator)
+        # Only superusers WITHOUT membership get admin override access
+        if membership.role == 'DM':
+            # DMs see everything in their campaign
+            visible_messages = visible_messages.order_by('created_at')
+        elif request.user.is_superuser and is_admin_viewing:
+            # Superuser viewing without membership - can see everything (admin mode)
+            visible_messages = visible_messages.order_by('created_at')
+        else:
+            # Players and Spectators have restrictions
+            # They can see:
+            # 1. PUBLIC messages (everyone)
+            # 2. Their own messages regardless of visibility type  
+            # 3. DM_ONLY messages sent TO them or FROM them (to DM)
+            # 4. SECRET_WHISPER messages where they are a recipient
+            # 5. SPLIT_GROUP messages for their group
+            
+            base_query = Q(visibility_type='PUBLIC') | Q(sender=request.user)
+            
+            # Add DM_ONLY conditions
+            base_query |= Q(visibility_type='DM_ONLY', sender=request.user)
+            base_query |= Q(visibility_type='DM_ONLY', recipient=request.user)
+            
+            # Add SECRET_WHISPER condition
+            base_query |= Q(visibility_type='SECRET_WHISPER', recipients=request.user)
+            
+            # Add SPLIT_GROUP condition if applicable
+            if user_group:
+                base_query |= Q(visibility_type='SPLIT_GROUP', party_group=user_group)
+            
+            visible_messages = visible_messages.filter(base_query).order_by('created_at')
+
+        # Get dice rolls (public only for non-DMs)
+        if membership.role == 'DM':
+            dice_rolls = DiceRollLog.objects.filter(campaign=campaign).order_by('created_at')
+        else:
+            dice_rolls = DiceRollLog.objects.filter(campaign=campaign, visibility='PUBLIC').order_by('created_at')
+
+        # Serialize messages
+        message_list = []
+        for msg in visible_messages[:50]:  # Limit to last 50 messages
+            # Use stored name for archival (preserves original username even if deleted)
+            sender_name = msg.get_sender_display_name()
+            sender_id = msg.sender.id if msg.sender else None
+            
+            # Determine display name based on message type (only for current user's messages)
+            display_sender_name = sender_name
+            if msg.message_type == 'IC' and membership.role == 'PLAYER' and msg.sender == request.user:
+                # Show character name for IC messages
+                try:
+                    char = Character.objects.get(user=request.user, campaign=campaign)
+                    display_sender_name = char.name
+                except Character.DoesNotExist:
+                    pass
+            
+            # Check if this is a whisper to the current user (DM_ONLY or SECRET_WHISPER)
+            is_dm_whisper_to_me = False
+            if msg.visibility_type == 'DM_ONLY':
+                is_dm_whisper_to_me = (msg.recipient == request.user)
+            elif msg.visibility_type == 'SECRET_WHISPER':
+                is_dm_whisper_to_me = msg.recipients.filter(id=request.user.id).exists()
+            
+            message_list.append({
+                'id': msg.id,
+                'content': msg.content,
+                'sender_id': sender_id,
+                'sender_name': display_sender_name,
+                'real_sender_name': sender_name,
+                'visibility_type': msg.visibility_type,
+                'message_type': msg.message_type,
+                'is_edited': msg.is_edited,
+                'created_at': msg.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'formatted_time': msg.created_at.strftime('%b %d, %H:%M'),
+                'is_spectator': membership.role == 'SPECTATOR',
+                'is_dm_whisper_to_me': is_dm_whisper_to_me,
+            })
+
+        dice_list = []
+        for roll in dice_rolls[:20]:  # Limit to last 20 rolls
+            # Use stored name for archival (preserves original username even if deleted)
+            roll_sender_name = roll.get_sender_display_name()
+            
+            dice_list.append({
+                'id': roll.id,
+                'formula': roll.formula,
+                'result': roll.result,
+                'visibility': roll.visibility,
+                'sender_name': roll_sender_name,
+                'created_at': roll.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            })
+
+        return JsonResponse({
+            'messages': message_list,
+            'dice_rolls': dice_list,
+            'user_role': membership.role,
+            'has_character': Character.objects.filter(user=request.user, campaign=campaign).exists(),
         })
-    
-    dice_list = []
-    for roll in dice_rolls[:20]:  # Limit to last 20 rolls
-        # Use stored name for archival (preserves original username even if deleted)
-        roll_sender_name = roll.get_sender_display_name()
-        
-        dice_list.append({
-            'id': roll.id,
-            'formula': roll.formula,
-            'result': roll.result,
-            'visibility': roll.visibility,
-            'sender_name': roll_sender_name,
-            'created_at': roll.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-        })
-    
-    return JsonResponse({
-        'messages': message_list,
-        'dice_rolls': dice_list,
-        'user_role': membership.role,
-        'has_character': Character.objects.filter(user=request.user, campaign=campaign).exists(),
-    })
     except Exception as e:
         import traceback
         traceback.print_exc()
