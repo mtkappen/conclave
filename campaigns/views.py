@@ -772,8 +772,8 @@ def post_dice_roll(request, campaign_pk):
     )
     
     # Always create a chat message for the dice roll (so it appears in the chat stream)
-    # Create a simple single-line format with no line breaks
-    content = f"{escape(request.user.real_name or request.user.username)} rolled {formula}: {result}"
+    # Create a simple single-line format with bold name and bold/italic result
+    content = f"<strong>{escape(request.user.real_name or request.user.username)} rolled</strong> {formula}: <strong><em>{result}</em></strong>"
     
     # Map visibility from DiceRollLog to ChatMessage
     visibility_type = 'DM_ONLY' if visibility == 'DM_ONLY' else 'PUBLIC'

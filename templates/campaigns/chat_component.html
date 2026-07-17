@@ -290,8 +290,12 @@
     font-style: italic;
 }
 
-.message-bubble.dice-roll .message-content {
-    /* No special classes needed - entire content is styled above */
+.message-bubble.dice-roll .message-content strong,
+.message-bubble.dice-roll .message-content em,
+.message-bubble.dice-roll .message-content b,
+.message-bubble.dice-roll .message-content i {
+    color: inherit;
+    font-size: inherit;
 }
 
 /* User's own messages on the right */
