@@ -26,9 +26,9 @@
     </div>
 </div>
 
-<!-- Main Layout: Chat First, Then Characters -->
-<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem;">
-    <!-- Left Column: Chat (Primary) + Characters -->
+<!-- Main Layout: Chat + Dice Roller side-by-side at top, Characters below -->
+<div style="display: grid; grid-template-columns: 3fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+    <!-- Left Column: Chat (Primary) -->
     <div>
         <!-- Chat Component - Now the primary focus -->
         {% include 'campaigns/chat_component.html' %}
@@ -75,9 +75,9 @@
         </div>
     </div>
     
-    <!-- Right Column: Essential Sidebar Info Only -->
+    <!-- Right Column: Dice Roller + Sidebar Info -->
     <div>
-        <!-- Dice Roller - Top Priority, aligned with chat top -->
+        <!-- Dice Roller - Aligned with chat top -->
         {% if membership.role != 'SPECTATOR' and not is_admin_viewing %}
         <div class="card" style="margin-bottom: 1.5rem;">
             {% include 'campaigns/dice_roller.html' %}
