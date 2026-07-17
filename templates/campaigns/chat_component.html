@@ -264,15 +264,15 @@
     background-color: #1a2d4e;
 }
 
-/* Dice roll message styling - Teams-like subtle system message */
+/* Dice roll message styling - simple single line, small italic gray text */
 .message-bubble.dice-roll {
     max-width: 100%;
     width: 100%;
     text-align: center;
     background-color: transparent;
     border: none;
-    padding: 0.3rem 0;
-    margin-bottom: 0.25rem;
+    padding: 0.2rem 0;
+    margin-bottom: 0.2rem;
 }
 
 .message-bubble.dice-roll .message-header {
@@ -292,28 +292,22 @@
 
 .message-bubble.dice-roll .dice-roll-message {
     display: inline-block;
-    padding: 0.2rem 1rem;
-    background-color: #2d2d30;
-    border-radius: 12px;
 }
 
-.message-bubble.dice-roll .sender-name {
-    color: #858585;
+.message-bubble.dice-roll .sender-name,
+.message-bubble.dice-roll .dice-formula,
+.message-bubble.dice-roll .dice-result {
+    color: #666;
     font-size: 0.75rem;
+    font-style: italic;
     font-weight: normal;
 }
 
 .message-bubble.dice-roll .dice-formula {
-    font-size: 0.75rem;
-    color: #9b5de5;
-    font-weight: normal;
     white-space: nowrap;
 }
 
 .message-bubble.dice-roll .dice-result {
-    font-size: 0.75rem;
-    color: #858585;
-    font-weight: normal;
     white-space: nowrap;
 }
 
