@@ -17,9 +17,12 @@
         <button class="tab-btn" data-tab="game" onclick="switchTab('game')">⚔️ Game (OOC)</button>
     </div>
 
-    <!-- Messages Area -->
-    <div class="chat-messages" id="chatMessages">
-        <div class="loading-spinner">Loading chat...</div>
+        <!-- Messages Area with Resize Handle -->
+    <div style="position: relative;">
+        <div class="chat-messages" id="chatMessages">
+            <div class="loading-spinner">Loading chat...</div>
+        </div>
+        <div class="chat-resize-handle" id="chatResizeHandle"></div>
     </div>
 
     <!-- Dice Roll Log (Collapsible) -->
@@ -194,13 +197,42 @@
 
 .chat-messages {
     height: 500px;
+    min-height: 300px;
+    max-height: 80vh;
     overflow-y: auto;
     background-color: #1e1e1e;
     border-radius: 8px;
     padding: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0;
     border: 1px solid #3c3c3c;
     width: 100%;
+}
+
+.chat-resize-handle {
+    height: 8px;
+    background-color: #3c3c3c;
+    cursor: ns-resize;
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    margin-bottom: 1rem;
+}
+
+.chat-resize-handle:hover {
+    background-color: #007acc;
+}
+
+.chat-resize-handle::after {
+    content: "⋮⋮";
+    color: #858585;
+    font-size: 14px;
+    letter-spacing: 2px;
+}
+
+.chat-resize-handle:hover::after {
+    color: white;
 }
 
 .message-bubble {
@@ -619,7 +651,63 @@ const CAMPAIGN_ID = "{{ campaign.pk }}" || 0;
 document.addEventListener('DOMContentLoaded', function() {
     loadChatMessages();
     startAutoRefresh();
+    initializeChatResize();
 });
+
+// Chat resize functionality
+function initializeChatResize() {
+    const chatMessages = document.getElementById('chatMessages');
+    const resizeHandle = document.getElementById('chatResizeHandle');
+    
+    if (!chatMessages || !resizeHandle) return;
+    
+    // Load saved height from localStorage
+    const savedHeight = localStorage.getItem('chatMessagesHeight');
+    if (savedHeight) {
+        chatMessages.style.height = savedHeight;
+    }
+    
+    let isResizing = false;
+    
+    resizeHandle.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        isResizing = true;
+        resizeHandle.style.backgroundColor = '#007acc';
+        
+        document.addEventListener('mousemove', handleResize);
+        document.addEventListener('mouseup', stopResize);
+    });
+    
+    function handleResize(e) {
+        if (!isResizing) return;
+        
+        const containerRect = chatMessages.parentElement.getBoundingClientRect();
+        const newHeight = containerRect.bottom - e.clientY;
+        
+        // Min height: 300px, Max height: 80vh
+        const minHeight = 300;
+        const maxHeight = window.innerHeight * 0.8;
+        
+        if (newHeight >= minHeight && newHeight <= maxHeight) {
+            chatMessages.style.height = newHeight + 'px';
+        }
+    }
+    
+    function stopResize() {
+        if (!isResizing) return;
+        isResizing = false;
+        resizeHandle.style.backgroundColor = '';
+        
+        // Save height to localStorage
+        const currentHeight = chatMessages.style.height;
+        if (currentHeight) {
+            localStorage.setItem('chatMessagesHeight', currentHeight);
+        }
+        
+        document.removeEventListener('mousemove', handleResize);
+        document.removeEventListener('mouseup', stopResize);
+    }
+}
 
 function startAutoRefresh() {
     autoRefreshInterval = setInterval(loadChatMessages, 4000); // Refresh every 4 seconds
