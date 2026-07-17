@@ -84,7 +84,13 @@
 </style>
 
 <script>
+// Set CAMPAIGN_ID globally if not already set
+if (typeof window.CAMPAIGN_ID === 'undefined') {
+    window.CAMPAIGN_ID = "{{ campaign.pk }}" || 0;
+}
+
 // Dice roller functions - these need to be globally accessible
+window.quickRoll = function(dieType) {
     document.getElementById('diceCount').value = 1;
     document.getElementById('diceType').value = dieType;
     document.getElementById('modifier').value = 0;
@@ -172,9 +178,4 @@ window.getCsrfToken = function() {
     return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
            document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
 };
-
-// Set CAMPAIGN_ID globally if not already set
-if (typeof window.CAMPAIGN_ID === 'undefined') {
-    window.CAMPAIGN_ID = "{{ campaign.pk }}" || 0;
-}
 </script>
