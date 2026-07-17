@@ -578,33 +578,26 @@ def get_chat_messages(request, campaign_pk):
     else:
         # Players and Spectators have restrictions
         # They can see:
-        # 1. PUBLIC messages
-        # 2. Their own DM_ONLY or SECRET_WHISPER messages (whispers they sent)
-        # 3. DM whispers TO them (DM_ONLY messages where they are the recipient)
+        # 1. PUBLIC messages (everyone)
+        # 2. Their own messages regardless of visibility type  
+        # 3. DM_ONLY messages sent TO them or FROM them (to DM)
         # 4. SECRET_WHISPER messages where they are a recipient
         # 5. SPLIT_GROUP messages for their group
-        # 6. Their own messages regardless of visibility
-        visible_messages = visible_messages.filter(
-            Q(visibility_type='PUBLIC') |
-            Q(visibility_type='DM_ONLY', sender=request.user) |  # Can see their own DM whispers
-            Q(visibility_type='DM_ONLY', recipient=request.user) |  # Can see DM whispers to them (old single-recipient system)
-            Q(visibility_type='SECRET_WHISPER', sender=request.user) |  # Can see their own secret whispers
-            Q(visibility_type='SECRET_WHISPER', recipients=request.user) |  # Can see secret whispers sent to them
-            Q(visibility_type='SPLIT_GROUP', party_group=user_group) |  # Can see their group's messages
-            Q(sender=request.user)  # Always see their own messages
-        )
         
-        # If split mode is active and user is in a group, only show public + their group
+        base_query = Q(visibility_type='PUBLIC') | Q(sender=request.user)
+        
+        # Add DM_ONLY conditions
+        base_query |= Q(visibility_type='DM_ONLY', sender=request.user)
+        base_query |= Q(visibility_type='DM_ONLY', recipient=request.user)
+        
+        # Add SECRET_WHISPER condition
+        base_query |= Q(visibility_type='SECRET_WHISPER', recipients=request.user)
+        
+        # Add SPLIT_GROUP condition if applicable
         if user_group:
-            visible_messages = visible_messages.filter(
-                Q(visibility_type='PUBLIC') |
-                Q(visibility_type='DM_ONLY', sender=request.user) |  # Their own whispers to DM
-                Q(visibility_type='DM_ONLY', recipient=request.user) |  # DM whispers to them
-                Q(visibility_type='SECRET_WHISPER', sender=request.user) |  # Their own secret whispers
-                Q(visibility_type='SECRET_WHISPER', recipients=request.user) |  # Secret whispers to them
-                Q(visibility_type='SPLIT_GROUP', party_group=user_group) |
-                Q(sender=request.user)
-            )
+            base_query |= Q(visibility_type='SPLIT_GROUP', party_group=user_group)
+        
+        visible_messages = visible_messages.filter(base_query).order_by('created_at')
     
     # Get dice rolls (public only for non-DMs)
     if membership.role == 'DM':
