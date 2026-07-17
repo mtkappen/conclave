@@ -84,17 +84,14 @@
 </style>
 
 <script>
-// Use Django template variable with fallback to prevent JS syntax errors during linting
-const CAMPAIGN_ID = "{{ campaign.pk }}" || 0;
-
-function quickRoll(dieType) {
+// Dice roller functions - these need to be globally accessible
     document.getElementById('diceCount').value = 1;
     document.getElementById('diceType').value = dieType;
     document.getElementById('modifier').value = 0;
-    rollDice();
-}
+    window.rollDice();
+};
 
-async function rollDice() {
+window.rollDice = async function() {
     const count = parseInt(document.getElementById('diceCount').value) || 1;
     const dieType = parseInt(document.getElementById('diceType').value) || 20;
     const modifier = parseInt(document.getElementById('modifier').value) || 0;
@@ -123,13 +120,13 @@ async function rollDice() {
     // Display result locally
     displayRollResult(formula, total);
     
-    // Send to server
+        // Send to server
     try {
-        const response = await fetch(`/campaign/${CAMPAIGN_ID}/dice/post/`, {
+        const response = await fetch(`/campaign/${window.CAMPAIGN_ID}/dice/post/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
+                'X-CSRFToken': window.getCsrfToken()
             },
             body: JSON.stringify({
                 formula: formula,
@@ -150,29 +147,34 @@ async function rollDice() {
         } else {
             console.log('Dice roll saved successfully!');
             // Refresh chat immediately to show the new dice roll message
-            if (typeof loadChatMessages === 'function') {
+            if (typeof window.loadChatMessages === 'function') {
                 console.log('Refreshing chat messages...');
-                await loadChatMessages();
+                await window.loadChatMessages();
             }
         }
     } catch (error) {
         console.error('Error posting dice roll:', error);
         alert('Failed to post dice roll: ' + error.message);
     }
-}
+};
 
-function displayRollResult(formula, result) {
+window.displayRollResult = function(formula, result) {
     const resultDiv = document.getElementById('lastRollResult');
     const formulaSpan = document.getElementById('lastRollFormula');
     const valueSpan = document.getElementById('lastRollValue');
     
-    formulaSpan.textContent = formula;
+        formulaSpan.textContent = formula;
     valueSpan.textContent = result;
     resultDiv.style.display = 'block';
-}
+};
 
-function getCsrfToken() {
+window.getCsrfToken = function() {
     return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
            document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+};
+
+// Set CAMPAIGN_ID globally if not already set
+if (typeof window.CAMPAIGN_ID === 'undefined') {
+    window.CAMPAIGN_ID = "{{ campaign.pk }}" || 0;
 }
 </script>
