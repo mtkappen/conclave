@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 import json
+import re
 
 from .models import User, Campaign, CampaignMembership, Character, InventoryItem, ChatMessage, DiceRollLog, PartyGroup, PartyGroupMember
 from .forms import AdminUserCreationForm, CustomAuthenticationForm, CampaignForm, CharacterForm, InventoryItemForm, PasswordChangeForm, UserRegistrationForm, UserPasswordChangeForm
@@ -769,29 +770,22 @@ def post_dice_roll(request, campaign_pk):
         visibility=visibility,
     )
     
-    # Create a chat message for the dice roll (so it appears in the chat stream)
-    # Build the content with individual die rolls if possible
-    import re
-    dice_match = re.match(r'(\d+)d(\d+)([+-]\d+)?', formula)
-    if dice_match:
-        count = int(dice_match.group(1))
-        die_type = int(dice_match.group(2))
-        
-        # Create a formatted message showing the roll details
-        content = f"<div class='dice-roll-message'><strong>🎲 {request.user.real_name or request.user.username} rolled:</strong><br>"
-        content += f"<span class='dice-formula'>{formula}</span><br>"
-        content += f"<span class='dice-result' style='font-size: 1.5rem; color: #007acc; font-weight: bold;'>Result: {result}</span></div>"
-        
-        # Map visibility from DiceRollLog to ChatMessage
-        visibility_type = 'DM_ONLY' if visibility == 'DM_ONLY' else 'PUBLIC'
-        
-        ChatMessage.objects.create(
-            content=content,
-            sender=request.user,
-            campaign=campaign,
-            visibility_type=visibility_type,
-            message_type='DICE_ROLL',
-        )
+    # Always create a chat message for the dice roll (so it appears in the chat stream)
+    # Create a formatted message showing the roll details
+    content = f"<div class='dice-roll-message'><strong>🎲 {request.user.real_name or request.user.username} rolled:</strong><br>"
+    content += f"<span class='dice-formula'>{formula}</span><br>"
+    content += f"<span class='dice-result' style='font-size: 1.5rem; color: #007acc; font-weight: bold;'>Result: {result}</span></div>"
+    
+    # Map visibility from DiceRollLog to ChatMessage
+    visibility_type = 'DM_ONLY' if visibility == 'DM_ONLY' else 'PUBLIC'
+    
+    ChatMessage.objects.create(
+        content=content,
+        sender=request.user,
+        campaign=campaign,
+        visibility_type=visibility_type,
+        message_type='DICE_ROLL',
+    )
     
     return JsonResponse({
         'success': True,
