@@ -1,17 +1,30 @@
 {% load static %}
 <!-- Chat Component for Campaign Detail -->
 <div class="chat-container" id="chatContainer">
-        <!-- Chat Header -->
-        <div class="chat-header">
-            <h3 style="color: #007acc; margin: 0;">💬 Campaign Chat</h3>
-            <div class="chat-controls">
-                {% if request.user.is_superuser and is_admin_viewing %}
-                <a href="{% url 'campaigns:admin_view_secrets' campaign.pk %}" class="btn btn-secondary" style="margin-right: 0.5rem;">🔐 View Secrets</a>
-                {% endif %}
-                <button class="btn btn-secondary" id="refreshBtn" onclick="loadChatMessages()">🔄 Refresh</button>
-                <span id="lastUpdate" style="color: #858585; font-size: 0.85rem; margin-left: 1rem;"></span>
-            </div>
+    <!-- Admin Override Banner (shown when admin is viewing all secrets) -->
+    {% if is_admin_viewing and request.user.is_superuser %}
+    <div style="background-color: #1a2d4e; border-left: 4px solid #00bbf9; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+        <p style="color: #00bbf9; font-weight: bold; margin: 0 0 0.5rem 0;">
+            🔐 Admin Override Mode Active
+        </p>
+        <p style="color: #d4d4d4; font-size: 0.9rem; margin: 0;">
+            You are viewing ALL messages including secret whispers and DM-only messages. 
+            Use responsibly! <a href="{% url 'campaigns:admin_campaign_list' %}" style="color: #00bbf9;">← Return to Admin Campaign List</a>
+        </p>
+    </div>
+    {% endif %}
+        
+    <!-- Chat Header -->
+    <div class="chat-header">
+        <h3 style="color: #007acc; margin: 0;">💬 Campaign Chat</h3>
+        <div class="chat-controls">
+            {% if request.user.is_superuser and is_admin_viewing %}
+            <a href="{% url 'campaigns:admin_view_secrets' campaign.pk %}" class="btn btn-secondary" style="margin-right: 0.5rem;">🔐 View Secrets (Detailed)</a>
+            {% endif %}
+            <button class="btn btn-secondary" id="refreshBtn" onclick="loadChatMessages()">🔄 Refresh</button>
+            <span id="lastUpdate" style="color: #858585; font-size: 0.85rem; margin-left: 1rem;"></span>
         </div>
+    </div>
 
     <!-- Message Tabs -->
     <div class="chat-tabs">

@@ -297,6 +297,9 @@ def campaign_detail(request, pk):
     # Track if this is an admin viewing without being a member
     is_admin_viewing = False
     
+    # Check for admin override mode (accessed from /admin/campaigns/ with ?admin_override=1)
+    is_admin_override = request.GET.get('admin_override') == '1' and request.user.is_superuser
+    
     # If no membership and not a superuser, deny access
     if not membership and not request.user.is_superuser:
         messages.error(request, 'You do not have access to this campaign.')
@@ -309,6 +312,18 @@ def campaign_detail(request, pk):
             role = 'DM'  # Admins get DM-level access for moderation
             is_temporary = True  # Flag to indicate this is admin viewing mode
         membership = TempMembership()
+    
+    # If admin override is requested and user is superuser, set the flag
+    # This allows admins to see ALL messages even if they are members
+    if is_admin_override:
+        is_admin_viewing = True
+        # Set session flag so AJAX calls know this is an admin override view
+        request.session['admin_campaign_view'] = True
+    else:
+        # Clear the session flag when NOT in admin override mode
+        # This ensures admins see normal role-based visibility when accessing normally
+        if 'admin_campaign_view' in request.session:
+            del request.session['admin_campaign_view']
     
     # Get characters for this campaign (membership should never be None here due to earlier checks)
     if membership and membership.role == 'DM':
@@ -564,6 +579,13 @@ def get_chat_messages(request, campaign_pk):
         # Track if this is an admin viewing without being a member
         is_admin_viewing = False
         
+        # Check for admin override mode (accessed from /admin/campaigns/ with ?admin_override=1)
+        # Note: We need to check the query params from the referring page, but since this is AJAX
+        # we'll rely on session or a different approach. For now, we'll pass it via a header or
+        # store it in session when the page loads.
+        # Actually, let's check if the user explicitly set admin_override in their session
+        is_admin_override = request.session.get('admin_campaign_view', False) and request.user.is_superuser
+        
         # If no membership and not a superuser, deny access
         if not membership and not request.user.is_superuser:
             return JsonResponse({'error': 'You do not have access to this campaign.'}, status=403)
@@ -575,6 +597,10 @@ def get_chat_messages(request, campaign_pk):
                 role = 'DM'  # Admins get DM-level access for moderation
                 is_temporary = True  # Flag to indicate this is admin viewing mode
             membership = TempMembership()
+        
+        # If admin override is active, allow seeing all messages
+        if is_admin_override:
+            is_admin_viewing = True
 
         # Get user's current party group if in split mode
         user_group = None

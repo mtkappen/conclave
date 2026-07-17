@@ -58,7 +58,7 @@
                     {% endif %}
                 </td>
                 <td style="padding: 0.75rem; text-align: center;">
-                    <a href="{% url 'campaigns:campaign_detail' campaign.pk %}" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
+                    <a href="{% url 'campaigns:campaign_detail' campaign.pk %}?admin_override=1" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
                     <a href="{% url 'campaigns:delete_campaign' campaign.pk %}?next=campaigns:admin_campaign_list" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem; background-color: #c73e54;">Delete</a>
                 </td>
             </tr>
