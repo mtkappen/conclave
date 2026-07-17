@@ -578,7 +578,7 @@ def get_chat_messages(request, campaign_pk):
 
         # Get user's current party group if in split mode
         user_group = None
-        if membership.role == 'PLAYER':
+        if membership and membership.role == 'PLAYER':
             try:
                 group_member = PartyGroupMember.objects.filter(user=request.user).first()
                 if group_member and group_member.group.campaign == campaign:
@@ -593,7 +593,7 @@ def get_chat_messages(request, campaign_pk):
         # Note: Superusers with campaign membership are treated as their assigned role (DM/Player/Spectator)
         # Only superusers WITHOUT membership get admin override access
         
-        user_role = getattr(membership, 'role', None)
+        user_role = membership.role if membership else None
         
         if user_role == 'DM':
             # DMs see everything in their campaign
@@ -626,7 +626,7 @@ def get_chat_messages(request, campaign_pk):
             visible_messages = visible_messages.filter(base_query).order_by('created_at')
 
         # Get dice rolls (public only for non-DMs)
-        if membership.role == 'DM':
+        if membership and membership.role == 'DM':
             dice_rolls = DiceRollLog.objects.filter(campaign=campaign).order_by('created_at')
         else:
             dice_rolls = DiceRollLog.objects.filter(campaign=campaign, visibility='PUBLIC').order_by('created_at')
@@ -640,7 +640,7 @@ def get_chat_messages(request, campaign_pk):
             
             # Determine display name based on message type (only for current user's messages)
             display_sender_name = sender_name
-            if msg.message_type == 'IC' and membership.role == 'PLAYER' and msg.sender == request.user:
+            if msg.message_type == 'IC' and membership and membership.role == 'PLAYER' and msg.sender == request.user:
                 # Show character name for IC messages
                 try:
                     char = Character.objects.get(user=request.user, campaign=campaign)
@@ -689,7 +689,7 @@ def get_chat_messages(request, campaign_pk):
         return JsonResponse({
             'messages': message_list,
             'dice_rolls': dice_list,
-            'user_role': membership.role,
+            'user_role': membership.role if membership else None,
             'has_character': Character.objects.filter(user=request.user, campaign=campaign).exists(),
         })
     except Exception as e:
