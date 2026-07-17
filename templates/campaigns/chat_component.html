@@ -2,16 +2,16 @@
 <!-- Chat Component for Campaign Detail -->
 <div class="chat-container" id="chatContainer">
         <!-- Chat Header -->
-    <div class="chat-header">
-        <h3 style="color: #007acc; margin: 0;">💬 Campaign Chat</h3>
-        <div class="chat-controls">
-            {% if request.user.is_superuser %}
-            <a href="{% url 'campaigns:admin_view_secrets' campaign.pk %}" class="btn btn-secondary" style="margin-right: 0.5rem;">🔐 View Secrets</a>
-            {% endif %}
-            <button class="btn btn-secondary" id="refreshBtn" onclick="loadChatMessages()">🔄 Refresh</button>
-            <span id="lastUpdate" style="color: #858585; font-size: 0.85rem; margin-left: 1rem;"></span>
+        <div class="chat-header">
+            <h3 style="color: #007acc; margin: 0;">💬 Campaign Chat</h3>
+            <div class="chat-controls">
+                {% if request.user.is_superuser and is_admin_viewing %}
+                <a href="{% url 'campaigns:admin_view_secrets' campaign.pk %}" class="btn btn-secondary" style="margin-right: 0.5rem;">🔐 View Secrets</a>
+                {% endif %}
+                <button class="btn btn-secondary" id="refreshBtn" onclick="loadChatMessages()">🔄 Refresh</button>
+                <span id="lastUpdate" style="color: #858585; font-size: 0.85rem; margin-left: 1rem;"></span>
+            </div>
         </div>
-    </div>
 
     <!-- Message Tabs -->
     <div class="chat-tabs">
@@ -255,6 +255,16 @@
 }
 
 .message-bubble.dm-only.whisper-to-me {
+    border-left: 3px solid #00bbf9;
+    background-color: #1a2d4e;
+}
+
+.message-bubble.secret-whisper {
+    border-left: 3px solid #ff00ff;
+    background-color: #2d004e;
+}
+
+.message-bubble.secret-whisper.whisper-to-me {
     border-left: 3px solid #00bbf9;
     background-color: #1a2d4e;
 }
@@ -802,11 +812,12 @@ function renderMessages(messages) {
         if (currentTab === 'story' && msg.message_type !== 'IC') return;
         if (currentTab === 'game' && msg.message_type === 'IC') return;
         
-        const visibilityClass = msg.visibility_type.toLowerCase().replace('_', '-');
+                let visibilityClass = msg.visibility_type.toLowerCase().replace('_', '-');
         const isDMOnly = msg.visibility_type === 'DM_ONLY';
+        const isSecretWhisper = msg.visibility_type === 'SECRET_WHISPER';
         const isSpectator = msg.is_spectator || false;
         
-        // Check if this is a DM whisper to the current user
+        // Check if this is a whisper to the current user (DM_ONLY or SECRET_WHISPER)
         const isWhisperToMe = msg.is_dm_whisper_to_me || false;
         
         // Check if this message was sent by the current user
@@ -834,7 +845,8 @@ function renderMessages(messages) {
                     <span>
                         <span class="sender-name">${escapeHtml(msg.sender_name)}</span>
                         ${isSpectator ? '<span class="spectator-badge">Spectator</span>' : ''}
-                        ${isWhisperToMe ? '<span class="whisper-badge" style="background-color: #00bbf9; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">DM Whisper</span>' : ''}
+                        ${msg.visibility_type === 'SECRET_WHISPER' && isWhisperToMe ? '<span class="whisper-badge" style="background-color: #ff00ff; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">Secret Whisper</span>' : ''}
+                        ${msg.visibility_type === 'DM_ONLY' && isWhisperToMe ? '<span class="whisper-badge" style="background-color: #00bbf9; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">DM Whisper</span>' : ''}
                         ${msg.is_edited ? '<span class="edited-indicator">(Edited)</span>' : ''}
                     </span>
                     <div class="message-actions">

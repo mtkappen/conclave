@@ -572,8 +572,13 @@ def get_chat_messages(request, campaign_pk):
     visible_messages = ChatMessage.objects.filter(campaign=campaign)
     
     # Filter based on visibility type and user role
-    if membership.role == 'DM' or request.user.is_superuser:
-        # DMs and admins see everything
+    # Note: Superusers with campaign membership are treated as their assigned role (DM/Player/Spectator)
+    # Only superusers WITHOUT membership get admin override access
+    if membership.role == 'DM':
+        # DMs see everything in their campaign
+        visible_messages = visible_messages.order_by('created_at')
+    elif request.user.is_superuser and is_admin_viewing:
+        # Superuser viewing without membership - can see everything (admin mode)
         visible_messages = visible_messages.order_by('created_at')
     else:
         # Players and Spectators have restrictions
