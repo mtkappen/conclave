@@ -3,17 +3,17 @@
 {% block title %}Sign In - TaskFlow{% endblock %}
 
 {% block content %}
-<div style="max-width: 400px; margin: 3rem auto;">
+<div style="max-width: 420px; margin: 2.5rem auto;">
     <div class="card">
-        <h2 style="text-align: center; margin-bottom: 1.5rem;">TaskFlow Sign In</h2>
+        <h2 style="text-align: center; margin-bottom: 1.25rem; font-size: 1.6rem;">TaskFlow Sign In</h2>
         
         <form method="post">
             {% csrf_token %}
             
-            <label for="{{ form.username.id_for_label }}">Username or Email</label>
+            <label for="{{ form.username.id_for_label }}" style="font-size: 0.95rem;">Username or Email</label>
             {{ form.username }}
             
-            <label for="{{ form.password.id_for_label }}">Password</label>
+            <label for="{{ form.password.id_for_label }}" style="font-size: 0.95rem;">Password</label>
             {{ form.password }}
             
             {% if form.errors %}
@@ -22,15 +22,15 @@
             </div>
             {% endif %}
             
-            <button type="submit" class="btn" style="width: 100%;">Sign In</button>
+            <button type="submit" class="btn" style="width: 100%; font-size: 0.95rem;">Sign In</button>
         </form>
         
-        <p style="text-align: center; margin-top: 1rem; color: #888;">
+        <p style="text-align: center; margin-top: 0.85rem; color: #888; font-size: 0.9rem;">
             No account? Contact the system administrator to create one.
         </p>
     </div>
     
-    <div class="card" style="margin-top: 2rem; font-size: 0.9rem; color: #aaa;">
+    <div class="card" style="margin-top: 1.5rem; font-size: 0.9rem; color: #aaa; padding: 1.25rem;">
         <strong>TaskFlow:</strong> A simple task management tool for teams and individuals to organize work and boost productivity.
     </div>
 </div>

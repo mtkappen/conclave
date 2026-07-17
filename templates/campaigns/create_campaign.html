@@ -3,20 +3,20 @@
 {% block title %}Create Campaign - D&D Tabletop{% endblock %}
 
 {% block content %}
-<div style="max-width: 600px; margin: 2rem auto;">
+<div style="max-width: 650px; margin: 2rem auto;">
     <div class="card">
-        <h2>🎲 Create New Campaign</h2>
+        <h2 style="font-size: 1.5rem;">🎲 Create New Campaign</h2>
         
         <form method="post">
             {% csrf_token %}
             
-            <label for="{{ form.title.id_for_label }}">Campaign Title</label>
+            <label for="{{ form.title.id_for_label }}" style="font-size: 0.95rem;">Campaign Title</label>
             {{ form.title }}
             
-            <label for="{{ form.description.id_for_label }}">Description</label>
+            <label for="{{ form.description.id_for_label }}" style="font-size: 0.95rem;">Description</label>
             {{ form.description }}
             
-            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
                 <button type="submit" class="btn">Create Campaign</button>
                 <a href="{% url 'campaigns:dashboard' %}" class="btn btn-secondary">Cancel</a>
             </div>
@@ -24,8 +24,8 @@
     </div>
     
     <div class="card">
-        <h3>💡 Tips for Creating a Campaign</h3>
-        <ul style="list-style-position: inside; line-height: 2; color: #aaa;">
+        <h3 style="font-size: 1.2rem;">💡 Tips for Creating a Campaign</h3>
+        <ul style="list-style-position: inside; line-height: 1.8; color: #aaa; font-size: 0.95rem;">
             <li>Choose an exciting title that reflects your adventure</li>
             <li>Add a brief description to help players understand the setting</li>
             <li>You'll be automatically set as the Dungeon Master (DM)</li>

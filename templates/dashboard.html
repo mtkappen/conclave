@@ -3,10 +3,10 @@
 {% block title %}Dashboard - D&D Tabletop{% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-    <h1>Welcome, {{ user.real_name|default:user.username }}! 🎲</h1>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1 style="font-size: 1.75rem;">Welcome, {{ user.real_name|default:user.username }}! 🎲</h1>
     
-    <div style="display: flex; gap: 0.5rem;">
+    <div style="display: flex; gap: 0.4rem;">
         {% if user.is_superuser %}
         <a href="{% url 'campaigns:admin_user_list' %}" class="btn btn-secondary">Manage Users</a>
         {% endif %}
@@ -16,52 +16,52 @@
 </div>
 
 {% if memberships %}
-<h2 style="margin-bottom: 1rem;">Your Campaigns</h2>
+<h2 style="margin-bottom: 1rem; font-size: 1.4rem;">Your Campaigns</h2>
 
-<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.25rem;">
     {% for membership in memberships %}
     <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
-            <h3 style="color: #e94560;">{{ membership.campaign.title }}</h3>
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.85rem;">
+            <h3 style="color: #e94560; font-size: 1.2rem;">{{ membership.campaign.title }}</h3>
             <span class="role-badge role-{{ membership.role|lower }}">
                 {{ membership.get_role_display }}
             </span>
         </div>
         
         {% if membership.campaign.description %}
-        <p style="color: #aaa; margin-bottom: 1rem;">{{ membership.campaign.description|truncatewords:20 }}</p>
+        <p style="color: #aaa; margin-bottom: 0.85rem; font-size: 0.95rem;">{{ membership.campaign.description|truncatewords:20 }}</p>
         {% endif %}
         
-        <div style="display: flex; gap: 1rem; align-items: center;">
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
             <a href="{% url 'campaigns:campaign_detail' membership.campaign.pk %}" class="btn">Enter Campaign</a>
             
             {% if membership.role == 'DM' %}
-            <a href="{% url 'campaigns:dm_roster' membership.campaign.pk %}" class="btn btn-secondary" style="font-size: 0.9rem;">View Roster</a>
+            <a href="{% url 'campaigns:dm_roster' membership.campaign.pk %}" class="btn btn-secondary" style="font-size: 0.85rem;">View Roster</a>
             {% endif %}
         </div>
         
-        <small style="color: #666; display: block; margin-top: 1rem;">
+        <small style="color: #666; display: block; margin-top: 0.85rem; font-size: 0.85rem;">
             Joined: {{ membership.joined_at|date:"M d, Y" }}
         </small>
     </div>
     {% endfor %}
 </div>
 {% else %}
-<div class="card" style="text-align: center; padding: 3rem;">
-    <h2 style="color: #e94560;">No Campaigns Yet</h2>
-    <p style="margin: 1rem 0; color: #aaa;">You haven't joined any campaigns yet.</p>
+<div class="card" style="text-align: center; padding: 2.5rem;">
+    <h2 style="color: #e94560; font-size: 1.5rem;">No Campaigns Yet</h2>
+    <p style="margin: 0.85rem 0; color: #aaa; font-size: 0.95rem;">You haven't joined any campaigns yet.</p>
     
     <a href="{% url 'campaigns:create_campaign' %}" class="btn">Create Your First Campaign</a>
 </div>
 {% endif %}
 
-<div class="card" style="margin-top: 2rem;">
-    <h2>Quick Guide 📖</h2>
-    <ul style="list-style-position: inside; line-height: 2;">
+<div class="card" style="margin-top: 1.5rem;">
+    <h2 style="font-size: 1.3rem;">Quick Guide 📖</h2>
+    <ul style="list-style-position: inside; line-height: 1.8; font-size: 0.95rem;">
         <li><strong>Dungeon Master (DM):</strong> Creates campaign, runs the game, views all character sheets, manages members</li>
         <li><strong>Player:</strong> Creates characters and plays in campaigns</li>
         <li><strong>Spectator:</strong> Watches and chats without playing</li>
-        <li style="margin-top: 1rem;"><em>Note: System Admin (superuser) can manage users via the "Users" link but doesn't participate in campaigns by default.</em></li>
+        <li style="margin-top: 0.85rem;"><em>Note: System Admin (superuser) can manage users via the "Users" link but doesn't participate in campaigns by default.</em></li>
     </ul>
 </div>
 {% endblock %}

@@ -1,11 +1,3 @@
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>{% block title %}D&D Tabletop{% endblock %}</title>
     <style>
         * {
             margin: 0;
@@ -22,7 +14,7 @@
         
         .navbar {
             background-color: #252526;
-            padding: 1rem 2rem;
+            padding: 0.75rem 3rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -30,7 +22,7 @@
         }
         
         .navbar-brand {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: bold;
             color: #007acc;
             text-decoration: none;
@@ -39,15 +31,16 @@
         .navbar-nav {
             display: flex;
             list-style: none;
-            gap: 1.5rem;
+            gap: 0.75rem;
         }
         
         .navbar-nav a {
             color: #eee;
             text-decoration: none;
-            padding: 0.5rem 1rem;
+            padding: 0.4rem 0.8rem;
             border-radius: 4px;
             transition: background-color 0.3s;
+            font-size: 0.95rem;
         }
         
         .navbar-nav a:hover {
@@ -55,36 +48,36 @@
         }
         
         .container {
-            width: calc(100% - 4rem);
-            max-width: none;
-            margin: 2rem auto;
+            width: calc(100% - 6rem);
+            max-width: 1400px;
+            margin: 1.5rem auto;
             padding: 0;
         }
         
         .card {
             background-color: #252526;
             border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             border: 1px solid #3c3c3c;
         }
         
         .card h2 {
             color: #007acc;
-            margin-bottom: 1rem;
+            margin-bottom: 0.85rem;
         }
         
         .btn {
             display: inline-block;
-            padding: 0.75rem 1.5rem;
+            padding: 0.6rem 1.2rem;
             background-color: #007acc;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             text-decoration: none;
-            font-size: 1rem;
+            font-size: 0.95rem;
             transition: background-color 0.3s;
         }
         
@@ -102,8 +95,8 @@
         
         .form-control {
             width: 100%;
-            padding: 0.75rem;
-            margin-bottom: 1rem;
+            padding: 0.65rem;
+            margin-bottom: 0.85rem;
             border: 1px solid #3c3c3c;
             border-radius: 4px;
             background-color: #1e1e1e;
@@ -118,14 +111,14 @@
         
         label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
             font-weight: bold;
         }
         
         .alert {
-            padding: 1rem;
+            padding: 0.85rem;
             border-radius: 4px;
-            margin-bottom: 1rem;
+            margin-bottom: 0.85rem;
         }
         
         .alert-success {
@@ -145,9 +138,9 @@
         
         .role-badge {
             display: inline-block;
-            padding: 0.25rem 0.75rem;
+            padding: 0.2rem 0.6rem;
             border-radius: 12px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: bold;
         }
         
@@ -156,7 +149,7 @@
         .role-spectator { background-color: #f15bb5; }
         
         .d20-icon {
-            font-size: 2rem;
+            font-size: 1.75rem;
             color: #007acc;
         }
         
@@ -169,9 +162,9 @@
             background: none;
             border: none;
             color: #007acc;
-            font-size: 1rem;
+            font-size: 0.95rem;
             cursor: pointer;
-            padding: 0.5rem 1rem;
+            padding: 0.4rem 0.8rem;
             border-radius: 4px;
             transition: background-color 0.3s;
         }
@@ -191,7 +184,7 @@
             min-width: 200px;
             z-index: 1000;
             display: none;
-            margin-top: 0.5rem;
+            margin-top: 0.4rem;
         }
         
         .user-dropdown.active {
@@ -202,14 +195,14 @@
         .user-dropdown button {
             display: block;
             width: 100%;
-            padding: 0.75rem 1rem;
+            padding: 0.65rem 1rem;
             color: #eee;
             text-decoration: none;
             background: none;
             border: none;
             text-align: left;
             cursor: pointer;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             transition: background-color 0.3s;
         }
         
@@ -221,80 +214,40 @@
         .user-dropdown .divider {
             height: 1px;
             background-color: #3c3c3c;
-            margin: 0.5rem 0;
+            margin: 0.4rem 0;
+        }
+        
+        /* Responsive design - Mobile-first with desktop optimizations */
+        @media (min-width: 768px) {
+            .navbar {
+                padding: 0.75rem 4rem;
+            }
+            
+            .container {
+                width: calc(100% - 8rem);
+                margin: 2rem auto;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .navbar {
+                padding: 0.75rem 6rem;
+            }
+            
+            .container {
+                width: calc(100% - 10rem);
+                margin: 2.5rem auto;
+            }
+        }
+        
+        @media (min-width: 1440px) {
+            .navbar {
+                padding: 0.75rem 8rem;
+            }
+            
+            .container {
+                width: calc(100% - 12rem);
+                margin: 3rem auto;
+            }
         }
     </style>
-</head>
-<body>
-    <nav class="navbar">
-        {% if user.is_authenticated %}
-        <a href="{% url 'campaigns:dashboard' %}" class="navbar-brand">
-            🎲 D&D Tabletop
-        </a>
-        {% else %}
-        <a href="{% url 'campaigns:login' %}" class="navbar-brand">
-            📋 TaskFlow
-        </a>
-        {% endif %}
-        {% if user.is_authenticated %}
-        <ul class="navbar-nav">
-            <li><a href="{% url 'campaigns:dashboard' %}">Dashboard</a></li>
-            {% if user.is_superuser %}
-            <li><a href="{% url 'campaigns:admin_user_list' %}">Users</a></li>
-            <li><a href="{% url 'campaigns:admin_campaign_list' %}">All Campaigns</a></li>
-            {% endif %}
-            <li><a href="{% url 'campaigns:create_campaign' %}">New Campaign</a></li>
-            <li class="user-menu-container">
-                <button type="button" class="user-menu-toggle" id="userMenuToggle">
-                    {{ user.real_name|default:user.username }} ▼
-                </button>
-                <div class="user-dropdown" id="userDropdown">
-                    <a href="{% url 'campaigns:voluntary_change_password' %}">🔐 Change Password</a>
-                    <div class="divider"></div>
-                    <a href="{% url 'campaigns:logout' %}">🚪 Logout</a>
-                </div>
-            </li>
-        </ul>
-        {% else %}
-        <ul class="navbar-nav">
-            <li><a href="{% url 'campaigns:login' %}">Sign In</a></li>
-            <li><a href="{% url 'campaigns:register' %}">Create Account</a></li>
-        </ul>
-        {% endif %}
-    </nav>
-
-    <script>
-        // User dropdown toggle
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggle = document.getElementById('userMenuToggle');
-            const dropdown = document.getElementById('userDropdown');
-            
-            if (toggle && dropdown) {
-                toggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    dropdown.classList.toggle('active');
-                });
-                
-                // Close dropdown when clicking outside
-                document.addEventListener('click', function(e) {
-                    if (!dropdown.contains(e.target) && !toggle.contains(e.target)) {
-                        dropdown.classList.remove('active');
-                    }
-                });
-            }
-        });
-    </script>
-
-    <div class="container">
-        {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">
-            {{ message }}
-        </div>
-        {% endfor %}
-        {% endif %}
-
-        {% block content %}{% endblock %}
-    </div>
-</body>
-</html>
