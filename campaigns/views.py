@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.utils.html import escape
 import json
 import re
 
@@ -771,10 +772,8 @@ def post_dice_roll(request, campaign_pk):
     )
     
     # Always create a chat message for the dice roll (so it appears in the chat stream)
-    # Create a formatted message showing the roll details
-    content = f"<div class='dice-roll-message'><strong>🎲 {request.user.real_name or request.user.username} rolled:</strong><br>"
-    content += f"<span class='dice-formula'>{formula}</span><br>"
-    content += f"<span class='dice-result' style='font-size: 1.5rem; color: #007acc; font-weight: bold;'>Result: {result}</span></div>"
+    # Create a compact formatted message showing the roll details
+    content = f"<div class='dice-roll-message'><span class='sender-name'>{escape(request.user.real_name or request.user.username)}</span> rolled: <span class='dice-formula'>{formula}</span> = <span class='dice-result'>{result}</span></div>"
     
     # Map visibility from DiceRollLog to ChatMessage
     visibility_type = 'DM_ONLY' if visibility == 'DM_ONLY' else 'PUBLIC'
