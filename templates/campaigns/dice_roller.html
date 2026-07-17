@@ -118,6 +118,8 @@ async function rollDice() {
         formula += modifier > 0 ? `+${modifier}` : modifier;
     }
     
+    console.log('Rolling dice:', formula, 'Result:', total);
+    
     // Display result locally
     displayRollResult(formula, total);
     
@@ -137,13 +139,25 @@ async function rollDice() {
             })
         });
         
+        console.log('Response status:', response.status);
+        
         const data = await response.json();
+        console.log('Response data:', data);
         
         if (!data.success) {
             console.error('Error saving dice roll:', data.error);
+            alert('Failed to save dice roll: ' + (data.error || 'Unknown error'));
+        } else {
+            console.log('Dice roll saved successfully!');
+            // Refresh chat immediately to show the new dice roll message
+            if (typeof loadChatMessages === 'function') {
+                console.log('Refreshing chat messages...');
+                await loadChatMessages();
+            }
         }
     } catch (error) {
         console.error('Error posting dice roll:', error);
+        alert('Failed to post dice roll: ' + error.message);
     }
 }
 
