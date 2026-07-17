@@ -557,7 +557,24 @@ def get_chat_messages(request, campaign_pk):
     """Fetch chat messages for a campaign with visibility filtering."""
     try:
         campaign = get_object_or_404(Campaign, pk=campaign_pk)
-        membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+        
+        # Check if user is a member of this campaign
+        membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+        
+        # Track if this is an admin viewing without being a member
+        is_admin_viewing = False
+        
+        # If no membership and not a superuser, deny access
+        if not membership and not request.user.is_superuser:
+            return JsonResponse({'error': 'You do not have access to this campaign.'}, status=403)
+        
+        # For admins without membership, create a temporary membership object for role checking
+        if not membership and request.user.is_superuser:
+            is_admin_viewing = True
+            class TempMembership:
+                role = 'DM'  # Admins get DM-level access for moderation
+                is_temporary = True  # Flag to indicate this is admin viewing mode
+            membership = TempMembership()
 
         # Get user's current party group if in split mode
         user_group = None
