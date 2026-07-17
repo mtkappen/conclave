@@ -22,7 +22,7 @@
     {% for membership in memberships %}
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.85rem;">
-            <h3 style="color: #e94560; font-size: 1.2rem;">{{ membership.campaign.title }}</h3>
+            <h3 style="color: #fff; font-size: 1.2rem;">{{ membership.campaign.title }}</h3>
             <span class="role-badge role-{{ membership.role|lower }}">
                 {{ membership.get_role_display }}
             </span>
@@ -48,7 +48,7 @@
 </div>
 {% else %}
 <div class="card" style="text-align: center; padding: 2.5rem;">
-    <h2 style="color: #e94560; font-size: 1.5rem;">No Campaigns Yet</h2>
+    <h2 style="color: #fff; font-size: 1.5rem;">No Campaigns Yet</h2>
     <p style="margin: 0.85rem 0; color: #aaa; font-size: 0.95rem;">You haven't joined any campaigns yet.</p>
     
     <a href="{% url 'campaigns:create_campaign' %}" class="btn">Create Your First Campaign</a>
