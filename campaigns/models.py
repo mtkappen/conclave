@@ -164,6 +164,7 @@ class ChatMessage(models.Model):
         ('IC', 'In-Character'),
         ('OOC_RELEVANT', 'Out-of-Character Relevant'),
         ('OOC_OFFTOPIC', 'Out-of-Character Off Topic'),
+        ('DICE_ROLL', 'Dice Roll'),
     ]
 
     content = models.TextField()

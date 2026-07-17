@@ -264,6 +264,42 @@
     background-color: #1a2d4e;
 }
 
+/* Dice roll message styling - centered, full width, different look */
+.message-bubble.dice-roll {
+    max-width: 100%;
+    width: 100%;
+    text-align: center;
+    background: linear-gradient(135deg, #2d1b4e 0%, #1a2d4e 100%);
+    border-left: none;
+    border-top: 3px solid #9b5de5;
+    padding: 1rem;
+}
+
+.message-bubble.dice-roll .sender-name {
+    color: #9b5de5;
+}
+
+.message-bubble.dice-roll .message-content {
+    color: #d4d4d4;
+}
+
+.message-bubble.dice-roll .dice-roll-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.message-bubble.dice-roll .dice-formula {
+    font-size: 1.2rem;
+    color: #9b5de5;
+    font-weight: bold;
+}
+
+.message-bubble.dice-roll .dice-result {
+    margin-top: 0.5rem;
+}
+
 /* User's own messages on the right */
 .message-bubble.user-message {
     margin-left: auto;
@@ -760,7 +796,7 @@ function renderMessages(messages) {
     
     let html = '';
     
-    messages.forEach(msg => {
+        messages.forEach(msg => {
         // Filter by tab
         if (currentTab === 'story' && msg.message_type !== 'IC') return;
         if (currentTab === 'game' && msg.message_type === 'IC') return;
@@ -776,14 +812,23 @@ function renderMessages(messages) {
         const currentUserPk = "{{ user.pk }}";
         const isUserMessage = String(msg.sender_id) === currentUserPk;
         
+        // Special handling for dice roll messages
+        const isDiceRoll = msg.message_type === 'DICE_ROLL';
+        
         // Add special class for whispers to me and user's own messages
         let bubbleClass = isWhisperToMe ? `${visibilityClass} whisper-to-me` : visibilityClass;
         if (isUserMessage) {
             bubbleClass += ' user-message';
         }
         
+        // Dice rolls get their own special class
+        if (isDiceRoll) {
+            bubbleClass = 'dice-roll';
+        }
+        
         html += `
             <div class="message-bubble ${bubbleClass}" data-id="${msg.id}">
+                ${!isDiceRoll ? `
                 <div class="message-header">
                     <span>
                         <span class="sender-name">${escapeHtml(msg.sender_name)}</span>
@@ -795,9 +840,9 @@ function renderMessages(messages) {
                         <button class="action-btn" onclick="editMessage(${msg.id})">✏️ Edit</button>
                         <button class="action-btn" onclick="deleteMessage(${msg.id})">🗑️ Delete</button>
                     </div>
-                </div>
+                </div>` : ''}
                 <div class="message-content message-html">${msg.content}</div>
-                <div class="message-time">${msg.formatted_time}</div>
+                ${!isDiceRoll ? `<div class="message-time">${msg.formatted_time}</div>` : ''}
             </div>
         `;
     });
