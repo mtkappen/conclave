@@ -1,5 +1,19 @@
 # Phase 2: Chat & Visibility - COMPLETED ✅
 
+## Recent Layout Improvements (Latest Commits)
+
+### Responsive Full-Width Layout
+- **Removed container max-width constraint**: Main content now uses full browser width instead of being capped at 1200px
+- **Flexible flexbox layout**: Chat container expands to fill available space while sidebar maintains fixed 320px width
+- **Proper spacing**: Container has 2rem margins on all sides for clean visual separation
+- **Content-sized chat bubbles**: Message bubbles now use `fit-content` sizing instead of fixed percentages, so they only take as much width as their text needs
+
+### Key Changes Made:
+1. **base.html**: Changed `.container` from `max-width: 1200px` to full width with proper margins
+2. **detail.html**: Switched from grid to flex layout for responsive column sizing
+3. **chat_component.html**: Chat container and messages area set to `width: 100%`
+4. **dice_roller.html**: Dice roller card set to `width: 100%` to fill sidebar
+
 ## Implementation Summary
 
 ### Backend Changes
