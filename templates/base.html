@@ -1,3 +1,11 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}D&D Tabletop{% endblock %}</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +20,7 @@
             line-height: 1.6;
         }
         
-        .navbar {
+                .navbar {
             background-color: #252526;
             padding: 0.75rem 3rem;
             display: flex;
@@ -47,7 +55,7 @@
             background-color: #2a2d2e;
         }
         
-        .container {
+                .container {
             width: calc(100% - 6rem);
             max-width: 1400px;
             margin: 1.5rem auto;
@@ -68,7 +76,7 @@
             margin-bottom: 0.85rem;
         }
         
-        .btn {
+                .btn {
             display: inline-block;
             padding: 0.6rem 1.2rem;
             background-color: #007acc;
@@ -93,7 +101,7 @@
             background-color: #4c4c4c;
         }
         
-        .form-control {
+                .form-control {
             width: 100%;
             padding: 0.65rem;
             margin-bottom: 0.85rem;
@@ -115,7 +123,7 @@
             font-weight: bold;
         }
         
-        .alert {
+                .alert {
             padding: 0.85rem;
             border-radius: 4px;
             margin-bottom: 0.85rem;
@@ -136,7 +144,7 @@
             color: white;
         }
         
-        .role-badge {
+                .role-badge {
             display: inline-block;
             padding: 0.2rem 0.6rem;
             border-radius: 12px;
@@ -148,7 +156,7 @@
         .role-player { background-color: #00bbf9; }
         .role-spectator { background-color: #f15bb5; }
         
-        .d20-icon {
+                .d20-icon {
             font-size: 1.75rem;
             color: #007acc;
         }
@@ -251,3 +259,77 @@
             }
         }
     </style>
+</head>
+<body>
+    <nav class="navbar">
+        {% if user.is_authenticated %}
+        <a href="{% url 'campaigns:dashboard' %}" class="navbar-brand">
+            🎲 D&D Tabletop
+        </a>
+        {% else %}
+        <a href="{% url 'campaigns:login' %}" class="navbar-brand">
+            📋 TaskFlow
+        </a>
+        {% endif %}
+        {% if user.is_authenticated %}
+        <ul class="navbar-nav">
+            <li><a href="{% url 'campaigns:dashboard' %}">Dashboard</a></li>
+            {% if user.is_superuser %}
+            <li><a href="{% url 'campaigns:admin_user_list' %}">Users</a></li>
+            <li><a href="{% url 'campaigns:admin_campaign_list' %}">All Campaigns</a></li>
+            {% endif %}
+            <li><a href="{% url 'campaigns:create_campaign' %}">New Campaign</a></li>
+            <li class="user-menu-container">
+                <button type="button" class="user-menu-toggle" id="userMenuToggle">
+                    {{ user.real_name|default:user.username }} ▼
+                </button>
+                <div class="user-dropdown" id="userDropdown">
+                    <a href="{% url 'campaigns:voluntary_change_password' %}">🔐 Change Password</a>
+                    <div class="divider"></div>
+                    <a href="{% url 'campaigns:logout' %}">🚪 Logout</a>
+                </div>
+            </li>
+        </ul>
+        {% else %}
+        <ul class="navbar-nav">
+            <li><a href="{% url 'campaigns:login' %}">Sign In</a></li>
+            <li><a href="{% url 'campaigns:register' %}">Create Account</a></li>
+        </ul>
+        {% endif %}
+    </nav>
+
+    <script>
+        // User dropdown toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggle = document.getElementById('userMenuToggle');
+            const dropdown = document.getElementById('userDropdown');
+            
+            if (toggle && dropdown) {
+                toggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('active');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!dropdown.contains(e.target) && !toggle.contains(e.target)) {
+                        dropdown.classList.remove('active');
+                    }
+                });
+            }
+        });
+    </script>
+
+    <div class="container">
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
