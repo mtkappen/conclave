@@ -697,7 +697,7 @@ function startResize(e) {
 function doResize(e) {
     if (!chatResizeState.isResizing || !chatResizeState.chatMessages) return;
     
-    const deltaY = chatResizeState.startY - e.clientY;
+    const deltaY = e.clientY - chatResizeState.startY;
     let newHeight = chatResizeState.startHeight + deltaY;
     
     // Min height: 300px, Max height: 80vh
