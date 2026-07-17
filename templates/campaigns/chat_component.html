@@ -686,6 +686,9 @@ document.addEventListener('DOMContentLoaded', function() {
     loadChatMessages();
     startAutoRefresh();
     initializeChatResize();
+    
+    // Ensure recipient dropdown shows correctly if whisper is already selected
+    toggleRecipientSelect();
 });
 
 // Chat resize functionality

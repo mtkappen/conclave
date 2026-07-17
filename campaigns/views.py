@@ -771,7 +771,7 @@ def post_chat_message(request, campaign_pk):
             party_group = get_object_or_404(PartyGroup, pk=group_id, campaign=campaign)
     
     try:
-        # Create message
+        # Create message (note: recipient field was removed, using recipients ManyToMany instead)
         message = ChatMessage.objects.create(
             content=content,
             sender=request.user,
@@ -779,7 +779,6 @@ def post_chat_message(request, campaign_pk):
             visibility_type=visibility_type,
             party_group=party_group,
             message_type=message_type,
-            recipient=dm_recipient,  # For backwards compatibility
         )
         
         # Add recipients for SECRET_WHISPER (must be done after message is saved)
