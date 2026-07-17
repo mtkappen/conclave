@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management - Admin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="{% url 'campaigns:dashboard' %}" class="btn btn-secondary" style="margin-bottom: 1rem;">← Back to Dashboard</a>
+    
+    <h1>User Management</h1>
+    <p style="color: #d4d4d4; margin-top: 0.5rem;">System Administrator Panel</p>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+    <!-- User List -->
+    <div class="card">
+        <h2 style="color: #007acc;">All Users ({{ user_data|length }})</h2>
+        
+        {% if user_data %}
+        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            <thead>
+                <tr style="border-bottom: 2px solid #3c3c3c;">
+                    <th style="text-align: left; padding: 0.75rem; color: #d4d4d4;">Username</th>
+                    <th style="text-align: left; padding: 0.75rem; color: #d4d4d4;">Real Name</th>
+                    <th style="text-align: center; padding: 0.75rem; color: #d4d4d4;">Campaigns</th>
+                    <th style="text-align: center; padding: 0.75rem; color: #d4d4d4;">Characters</th>
+                    <th style="text-align: center; padding: 0.75rem; color: #d4d4d4;">Messages</th>
+                    <th style="text-align: center; padding: 0.75rem; color: #d4d4d4;">Status</th>
+                    <th style="text-align: center; padding: 0.75rem; color: #d4d4d4;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in user_data %}
+                {% with user=item.user %}
+                <tr style="border-bottom: 1px solid #3c3c3c;">
+                    <td style="padding: 0.75rem; color: #d4d4d4;">@{{ user.username }}</td>
+                    <td style="padding: 0.75rem; color: #d4d4d4;">{{ user.real_name|default:"-" }}</td>
+                    <td style="padding: 0.75rem; text-align: center; color: #858585;">{{ item.membership_count }}</td>
+                    <td style="padding: 0.75rem; text-align: center; color: #858585;">{{ item.character_count }}</td>
+                    <td style="padding: 0.75rem; text-align: center; color: #858585;">{{ item.message_count }}</td>
+                    <td style="padding: 0.75rem; text-align: center;">
+                        {% if user.must_change_password %}
+                            <span class="role-badge" style="background-color: #f1c40f; color: #000;">Needs Password Change</span>
+                        {% else %}
+                            <span class="role-badge" style="background-color: #27ae60; color: white;">Active</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.75rem; text-align: center;">
+                        <a href="{% url 'campaigns:delete_user' user.pk %}" 
+                           class="btn btn-secondary" 
+                           style="font-size: 0.85rem; padding: 0.4rem 0.8rem; background-color: #c73e54;">
+                            Delete
+                        </a>
+                    </td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #aaa;">No users found.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Admin Actions -->
+    <div>
+        <div class="card">
+            <h3 style="color: #007acc;">Admin Actions</h3>
+        
+                <a href="{% url 'campaigns:admin_create_user' %}" 
+                   class="btn" 
+                   style="width: 100%; display: block; text-align: center; margin-bottom: 1rem;">
+                    + Create New User
+                </a>
+            
+                <div style="padding: 1rem; background-color: #1e1e1e; border-radius: 8px; font-size: 0.9rem; border: 1px solid #3c3c3c;">
+                    <strong>Workflow:</strong><br><br>
+                    1. Create user account<br>
+                    2. Share temporary password securely<br>
+                    3. User logs in and changes password
+                </div>
+        </div>
+        
+
+    </div>
+</div>
+
+
+{% endblock %}

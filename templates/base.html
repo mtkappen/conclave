@@ -1,0 +1,299 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}D&D Tabletop{% endblock %}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            line-height: 1.6;
+        }
+        
+        .navbar {
+            background-color: #252526;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3c3c3c;
+        }
+        
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #007acc;
+            text-decoration: none;
+        }
+        
+        .navbar-nav {
+            display: flex;
+            list-style: none;
+            gap: 1.5rem;
+        }
+        
+        .navbar-nav a {
+            color: #eee;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        
+        .navbar-nav a:hover {
+            background-color: #2a2d2e;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        
+        .card {
+            background-color: #252526;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            border: 1px solid #3c3c3c;
+        }
+        
+        .card h2 {
+            color: #007acc;
+            margin-bottom: 1rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #005a9e;
+        }
+        
+        .btn-secondary {
+            background-color: #3c3c3c;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #4c4c4c;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid #3c3c3c;
+            border-radius: 4px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #007acc;
+            box-shadow: 0 0 0 1px #007acc;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-success {
+            background-color: #2d6a4f;
+            color: white;
+        }
+        
+        .alert-error {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .alert-info {
+            background-color: #0e639c;
+            color: white;
+        }
+        
+        .role-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .role-dm { background-color: #9b5de5; }
+        .role-player { background-color: #00bbf9; }
+        .role-spectator { background-color: #f15bb5; }
+        
+        .d20-icon {
+            font-size: 2rem;
+            color: #007acc;
+        }
+        
+        /* User dropdown menu */
+        .user-menu-container {
+            position: relative;
+        }
+        
+        .user-menu-toggle {
+            background: none;
+            border: none;
+            color: #007acc;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        
+        .user-menu-toggle:hover {
+            background-color: #2a2d2e;
+        }
+        
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: #252526;
+            border: 1px solid #3c3c3c;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+            margin-top: 0.5rem;
+        }
+        
+        .user-dropdown.active {
+            display: block;
+        }
+        
+        .user-dropdown a,
+        .user-dropdown button {
+            display: block;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            color: #eee;
+            text-decoration: none;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: background-color 0.3s;
+        }
+        
+        .user-dropdown a:hover,
+        .user-dropdown button:hover {
+            background-color: #2a2d2e;
+        }
+        
+        .user-dropdown .divider {
+            height: 1px;
+            background-color: #3c3c3c;
+            margin: 0.5rem 0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        {% if user.is_authenticated %}
+        <a href="{% url 'campaigns:dashboard' %}" class="navbar-brand">
+            🎲 D&D Tabletop
+        </a>
+        {% else %}
+        <a href="{% url 'campaigns:login' %}" class="navbar-brand">
+            📋 TaskFlow
+        </a>
+        {% endif %}
+        {% if user.is_authenticated %}
+        <ul class="navbar-nav">
+            <li><a href="{% url 'campaigns:dashboard' %}">Dashboard</a></li>
+            {% if user.is_superuser %}
+            <li><a href="{% url 'campaigns:admin_user_list' %}">Users</a></li>
+            <li><a href="{% url 'campaigns:admin_campaign_list' %}">All Campaigns</a></li>
+            {% endif %}
+            <li><a href="{% url 'campaigns:create_campaign' %}">New Campaign</a></li>
+            <li class="user-menu-container">
+                <button type="button" class="user-menu-toggle" id="userMenuToggle">
+                    {{ user.real_name|default:user.username }} ▼
+                </button>
+                <div class="user-dropdown" id="userDropdown">
+                    <a href="{% url 'campaigns:voluntary_change_password' %}">🔐 Change Password</a>
+                    <div class="divider"></div>
+                    <a href="{% url 'campaigns:logout' %}">🚪 Logout</a>
+                </div>
+            </li>
+        </ul>
+        {% else %}
+        <ul class="navbar-nav">
+            <li><a href="{% url 'campaigns:login' %}">Sign In</a></li>
+            <li><a href="{% url 'campaigns:register' %}">Create Account</a></li>
+        </ul>
+        {% endif %}
+    </nav>
+
+    <script>
+        // User dropdown toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggle = document.getElementById('userMenuToggle');
+            const dropdown = document.getElementById('userDropdown');
+            
+            if (toggle && dropdown) {
+                toggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('active');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!dropdown.contains(e.target) && !toggle.contains(e.target)) {
+                        dropdown.classList.remove('active');
+                    }
+                });
+            }
+        });
+    </script>
+
+    <div class="container">
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

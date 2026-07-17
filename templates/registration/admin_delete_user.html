@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete User - Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 2rem auto;">
+    <div class="card">
+        <h2 style="color: #e94560;">⚠️ Delete User</h2>
+        
+        <p style="color: #aaa; margin-bottom: 1.5rem;">
+            Are you sure you want to delete the user <strong>@{{ object.username }}</strong>?
+        </p>
+        
+        {% if membership_count > 0 or character_count > 0 or message_count > 0 %}
+        <div style="background-color: #1a1a2e; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+            <h4 style="color: #9b5de5; margin-bottom: 0.75rem;">Related Data:</h4>
+            <ul style="list-style: none; line-height: 2; color: #aaa;">
+                {% if membership_count > 0 %}
+                <li>📋 Campaign Memberships: {{ membership_count }}</li>
+                {% endif %}
+                {% if character_count > 0 %}
+                <li>🎭 Characters: {{ character_count }}</li>
+                {% endif %}
+                {% if message_count > 0 %}
+                <li>💬 Chat Messages: {{ message_count }} (will be preserved)</li>
+                {% endif %}
+                {% if dice_roll_count > 0 %}
+                <li>🎲 Dice Rolls: {{ dice_roll_count }} (will be preserved)</li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <div style="background-color: #c73e5420; border-left: 4px solid #c73e54; padding: 1rem; margin-bottom: 1.5rem;">
+            <strong>⚠️ Important:</strong><br>
+            <ul style="margin-top: 0.5rem; color: #aaa; font-size: 0.9rem;">
+                <li>All campaign memberships will be removed</li>
+                <li>All characters and their inventory will be deleted</li>
+                <li>Chat messages and dice rolls will remain in campaigns but show as "Deleted User"</li>
+                <li>This action cannot be undone</li>
+            </ul>
+        </div>
+        
+        <form method="post" style="display: flex; gap: 1rem;">
+            {% csrf_token %}
+            <button type="submit" 
+                    class="btn btn-secondary" 
+                    style="background-color: #c73e54; flex: 1;">
+                Yes, Delete User
+            </button>
+            <a href="{% url 'campaigns:admin_user_list' %}" 
+               class="btn btn-secondary" 
+               style="flex: 1; text-align: center;">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,474 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Members - {{ campaign.title }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="{% url 'campaigns:campaign_detail' campaign.pk %}" class="btn btn-secondary" style="margin-bottom: 1rem;">← Back to Campaign</a>
+    
+    <h1>Dungeon Master: Manage Campaign Members</h1>
+    <p style="color: #d4d4d4; margin-top: 0.5rem;">{{ campaign.title }}</p>
+    <small style="color: #858585;">You can add Players and Spectators to this campaign.</small>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Current Members -->
+    <div class="card">
+        <h2 style="color: #007acc;">Current Members ({{ current_members.count }})</h2>
+        
+        {% if current_members %}
+        <div style="margin-top: 1rem;">
+            {% for membership in current_members %}
+            <div style="background-color: #1e1e1e; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; border: 1px solid #3c3c3c;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <strong style="color: #d4d4d4;">{{ membership.user.real_name|default:membership.user.username }}</strong>
+                        <br>
+                        <small style="color: #858585;">@{{ membership.user.username }}</small>
+                    </div>
+                    
+                    <span class="role-badge role-{{ membership.role|lower }}">
+                        {{ membership.get_role_display }}
+                    </span>
+                </div>
+                
+                {% if membership.user != user %}
+                <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+                    <!-- Role Change Dropdown -->
+                    <select class="form-control role-select" 
+                            data-membership-id="{{ membership.id }}"
+                            style="width: auto; flex: 1;">
+                        <option value="" disabled selected>Change role...</option>
+                        {% if membership.role != 'DM' %}
+                            <option value="DM">Dungeon Master</option>
+                        {% endif %}
+                        <option value="PLAYER" {% if membership.role == 'PLAYER' %}selected{% endif %}>Player</option>
+                        <option value="SPECTATOR" {% if membership.role == 'SPECTATOR' %}selected{% endif %}>Spectator</option>
+                    </select>
+                    
+                    <!-- Remove Button -->
+                    <button class="btn btn-secondary remove-btn" 
+                            data-membership-id="{{ membership.id }}"
+                            data-username="{{ membership.user.real_name|default:membership.user.username }}"
+                            style="background-color: #c73e54;">
+                        🗑️ Remove
+                    </button>
+                </div>
+                {% else %}
+                <small style="color: #858585; margin-top: 0.5rem; display: block;">You cannot change your own role</small>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color: #d4d4d4;">No members yet.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Add New Member -->
+    <div class="card">
+        <h2 style="color: #007acc;">Add New Member</h2>
+        
+        {% if available_users %}
+        <form id="addMemberForm" onsubmit="addMember(event)">
+            {% csrf_token %}
+            
+            <div style="margin-bottom: 1rem;">
+                <label for="user_select">Select User</label>
+                <select name="user_id" id="user_select" class="form-control" required>
+                    <option value="">-- Choose a user --</option>
+                    {% for user in available_users %}
+                        <option value="{{ user.id }}">{{ user.real_name|default:user.username }} (@{{ user.username }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <label for="role_select">Assign Role</label>
+                <select name="role" id="role_select" class="form-control" required>
+                    <option value="PLAYER" selected>Player</option>
+                    <option value="SPECTATOR">Spectator</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn" style="width: 100%;">+ Add Member</button>
+        </form>
+        
+        <small style="color: #858585; display: block; margin-top: 0.5rem;">
+            ℹ️ New members are added as Players or Spectators. You can change roles below after adding them.
+        </small>
+        
+        <div id="addMessage" style="margin-top: 1rem; display: none;"></div>
+        
+        {% else %}
+        <p style="color: #d4d4d4;">All users are already members of this campaign.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Role Reference -->
+<div class="card" style="margin-top: 2rem;">
+    <h3 style="color: #9b5de5;">Role Descriptions</h3>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem;">
+        <div style="padding: 1rem; background-color: #1e1e1e; border-radius: 8px; border: 1px solid #3c3c3c;">
+            <strong class="role-badge role-dm">Dungeon Master</strong>
+            <p style="font-size: 0.85rem; color: #d4d4d4; margin-top: 0.5rem;">
+                Campaign creator. Can view all characters, manage members, moderate chat, and control split-party mode.
+            </p>
+        </div>
+        
+        <div style="padding: 1rem; background-color: #1e1e1e; border-radius: 8px; border: 1px solid #3c3c3c;">
+            <strong class="role-badge role-player">Player</strong>
+            <p style="font-size: 0.85rem; color: #d4d4d4; margin-top: 0.5rem;">
+                Can create characters, chat, roll dice, and participate in the game.
+            </p>
+        </div>
+        
+        <div style="padding: 1rem; background-color: #1e1e1e; border-radius: 8px; border: 1px solid #3c3c3c;">
+            <strong class="role-badge role-spectator">Spectator</strong>
+            <p style="font-size: 0.85rem; color: #d4d4d4; margin-top: 0.5rem;">
+                Read-only access to chat and campaign info. Can post OOC comments but cannot create characters.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+const CAMPAIGN_ID = "{{ campaign.pk }}";
+
+// Custom Modal Functions
+function showModal(title, message, type = 'info') {
+    const modal = document.getElementById('customModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    
+    // Set color based on type
+    const iconElement = document.querySelector('.modal-icon');
+    if (type === 'success') {
+        iconElement.innerHTML = '✓';
+        iconElement.style.backgroundColor = '#28a745';
+    } else if (type === 'error') {
+        iconElement.innerHTML = '✕';
+        iconElement.style.backgroundColor = '#dc3545';
+    } else if (type === 'warning') {
+        iconElement.innerHTML = '!';
+        iconElement.style.backgroundColor = '#ffc107';
+    } else {
+        iconElement.innerHTML = 'ℹ';
+        iconElement.style.backgroundColor = '#17a2b8';
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function hideModal() {
+    const modal = document.getElementById('customModal');
+    modal.style.display = 'none';
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('customModal');
+    if (event.target === modal) {
+        hideModal();
+    }
+});
+
+// Event listeners for role change dropdowns
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = getCsrfToken();
+    if (csrfToken && !document.querySelector('meta[name="csrf-token"]')) {
+        const meta = document.createElement('meta');
+        meta.name = 'csrf-token';
+        meta.content = csrfToken;
+        document.head.appendChild(meta);
+    }
+
+    // Add event listeners to role selects
+    document.querySelectorAll('.role-select').forEach(function(select) {
+        select.addEventListener('change', function() {
+            const membershipId = this.getAttribute('data-membership-id');
+            const newRole = this.value;
+            
+            if (!newRole) return;
+            
+            // Show confirmation modal for role change
+            showModal('Confirm Role Change', `Change role to ${newRole}?`, 'warning');
+            
+            // Set up the confirm button action
+            window.confirmAction = function() {
+                hideModal();
+                updateRole(membershipId, newRole, select);
+            };
+            
+            // Show confirm button
+            const confirmBtn = document.getElementById('modalConfirmBtn');
+            confirmBtn.style.display = 'inline-block';
+            confirmBtn.onclick = window.confirmAction;
+        });
+        
+        // Store previous value for revert on cancel
+        select.addEventListener('change', function() {
+            this.previousValue = this.value;
+        });
+    });
+
+    // Add event listeners to remove buttons
+    document.querySelectorAll('.remove-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const membershipId = this.getAttribute('data-membership-id');
+            const username = this.getAttribute('data-username');
+            
+            // Show confirmation modal
+            showModal('Confirm Removal', `Are you sure you want to remove ${username} from this campaign? This action cannot be undone.`, 'warning');
+            
+            // Set up the confirm button action
+            window.confirmAction = function() {
+                hideModal();
+                const csrfToken = getCsrfToken();
+                if (!csrfToken) {
+                    showModal('Error', 'CSRF token not found. Please refresh the page and try again.', 'error');
+                    return;
+                }
+                
+                // Proceed with removal
+                fetch(`/membership/${membershipId}/remove/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    }
+                })
+                .then(async response => {
+                    let data;
+                    const cloneForError = response.clone();
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        const text = await cloneForError.text();
+                        throw new Error(`Server returned invalid response: ${response.status}`);
+                    }
+                    
+                    if (!response.ok) {
+                        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                    }
+                    
+                    if (data.success) {
+                        showModal('Success', `${username} has been removed from the campaign.`, 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showModal('Error', data.error || 'Unknown error', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Full error removing member:', error);
+                    showModal('Error', 'Failed to remove member. Error: ' + error.message, 'error');
+                });
+            };
+            
+            // Show confirm button
+            const confirmBtn = document.getElementById('modalConfirmBtn');
+            confirmBtn.style.display = 'inline-block';
+            confirmBtn.onclick = window.confirmAction;
+        });
+    });
+});
+
+async function updateRole(membershipId, newRole, selectElement) {
+    if (!newRole || !selectElement) return;
+    
+    console.log('Attempting to update role:', membershipId, 'to', newRole);
+    
+    try {
+        const url = `/membership/${membershipId}/role/`;
+        console.log('Fetching URL:', url);
+        
+        const csrfToken = getCsrfToken();
+        if (!csrfToken) {
+            alert('CSRF token not found. Please refresh the page and try again.');
+            return;
+        }
+        console.log('CSRF Token found:', !!csrfToken);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken
+            },
+            body: `role=${encodeURIComponent(newRole)}`
+        });
+        
+        console.log('Response status:', response.status);
+        
+        let data;
+        // Clone the response so we can read it multiple times if needed
+        const cloneForError = response.clone();
+        try {
+            data = await response.json();
+        } catch (e) {
+            const text = await cloneForError.text();
+            console.error('Failed to parse JSON response:', text);
+            throw new Error(`Server returned invalid response: ${response.status}`);
+        }
+        
+        console.log('Response data:', data);
+        
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+        
+        if (data.success) {
+            showModal('Success', `Role updated successfully to ${newRole}!`, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showModal('Error', data.error || 'Unknown error occurred', 'error');
+            // Revert dropdown on error
+            selectElement.value = selectElement.previousValue || '';
+        }
+    } catch (error) {
+        console.error('Full error:', error);
+        showModal('Error', 'Failed to update role. Error: ' + error.message, 'error');
+        // Revert dropdown on error
+        selectElement.value = selectElement.previousValue || '';
+    }
+}
+
+async function removeMember(membershipId, username) {
+    // Show confirmation modal
+    showModal('Confirm Removal', `Are you sure you want to remove ${username} from this campaign?`, 'warning');
+    
+    const csrfToken = getCsrfToken();
+    if (!csrfToken) {
+        hideModal();
+        showModal('Error', 'CSRF token not found. Please refresh the page and try again.', 'error');
+        return;
+    }
+    
+    try {
+        console.log('Removing member:', membershipId);
+        
+        const response = await fetch(`/membership/${membershipId}/remove/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        });
+        
+        console.log('Response status:', response.status);
+        
+        let data;
+        // Clone the response so we can read it multiple times if needed
+        const cloneForError = response.clone();
+        try {
+            data = await response.json();
+        } catch (e) {
+            const text = await cloneForError.text();
+            console.error('Failed to parse JSON response:', text);
+            throw new Error(`Server returned invalid response: ${response.status}`);
+        }
+        
+        console.log('Response data:', data);
+        
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+        
+        if (data.success) {
+            hideModal();
+            showModal('Success', `${username} has been removed from the campaign.`, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            hideModal();
+            showModal('Error', data.error || 'Unknown error', 'error');
+        }
+    } catch (error) {
+        console.error('Full error removing member:', error);
+        hideModal();
+        showModal('Error', 'Failed to remove member. Error: ' + error.message, 'error');
+    }
+}
+
+async function addMember(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('addMemberForm');
+    const userId = form.querySelector('#user_select').value;
+    const role = form.querySelector('#role_select').value;
+    
+    if (!userId) {
+        showModal('Error', 'Please select a user.', 'error');
+        return;
+    }
+    
+    try {
+        console.log('Adding member:', userId, 'as', role);
+        
+        const response = await fetch(`/campaign/${CAMPAIGN_ID}/members/add/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: `user_id=${encodeURIComponent(userId)}&role=${encodeURIComponent(role)}`
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Response:', data);
+        
+        if (data.success) {
+            showModal('Success', 'Member added successfully!', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showModal('Error', data.error || 'Unknown error', 'error');
+        }
+    } catch (error) {
+        console.error('Error adding member:', error);
+        showModal('Error', 'Failed to add member. Error: ' + error.message, 'error');
+    }
+}
+
+function getCsrfToken() {
+    // Try multiple methods to get CSRF token
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) return metaTag.content;
+    
+    const inputField = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (inputField) return inputField.value;
+    
+    // Try cookie
+    const cookies = document.cookie.split('; ');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.split('=');
+        if (name === 'csrftoken') return value;
+    }
+    
+    console.warn('CSRF token not found!');
+    return '';
+}
+
+</script>
+
+<!-- Custom Modal -->
+<div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 9999; justify-content: center; align-items: center;">
+    <div style="background-color: #252526; border-radius: 12px; padding: 2rem; max-width: 450px; width: 90%; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border: 1px solid #007acc;">
+        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+            <div class="modal-icon" style="width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; color: white; margin-right: 1rem;"></div>
+            <h3 id="modalTitle" style="color: #007acc; margin: 0; flex: 1;">Modal Title</h3>
+        </div>
+        <p id="modalMessage" style="color: #d4d4d4; line-height: 1.6; margin-bottom: 1.5rem;"></p>
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button onclick="hideModal()" style="background-color: #3c3c3c; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-size: 1rem;">Close</button>
+            <button id="modalConfirmBtn" style="background-color: #007acc; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-size: 1rem; display: none;">Confirm</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

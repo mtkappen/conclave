@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ campaign.title }} - D&D Tabletop{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="{% url 'campaigns:dashboard' %}" class="btn btn-secondary" style="margin-bottom: 1rem;">← Back to Dashboard</a>
+    
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div>
+            <h1>{{ campaign.title }}</h1>
+            {% if campaign.description %}
+            <p style="color: #aaa; margin-top: 0.5rem;">{{ campaign.description }}</p>
+            {% endif %}
+        </div>
+        
+        {% if is_admin_viewing %}
+        <span class="role-badge" style="background-color: #9b5de5; color: white;">
+            System Administrator (View Only)
+        </span>
+        {% else %}
+        <span class="role-badge role-{{ membership.role|lower }}">
+            Your Role: {{ membership.get_role_display }}
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Main Layout: Chat First, Then Characters -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+    <!-- Left Column: Chat (Primary) + Characters -->
+    <div>
+        <!-- Chat Component - Now the primary focus -->
+        {% include 'campaigns/chat_component.html' %}
+        
+        <!-- Campaign Characters (Below chat) -->
+        <div class="card" style="margin-top: 2rem;">
+            <h2>📜 Campaign Characters</h2>
+            
+            {% if characters %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+                {% for character in characters %}
+                <div style="background-color: #2d2d30; padding: 1rem; border-radius: 4px; border: 1px solid #3c3c3c;">
+                    {% if character.avatar %}
+                    <img src="{{ character.avatar.url }}" alt="{{ character.name }}" 
+                         style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 0.5rem;">
+                    {% endif %}
+                    
+                    <h4 style="color: #9cdcfe; font-size: 0.95rem;">{{ character.name }}</h4>
+                    <p style="font-size: 0.8rem; color: #d4d4d4;">
+                        {{ character.class_name }} - Level {{ character.level }}
+                    </p>
+                    <p style="font-size: 0.75rem; color: #808080;">
+                        by {{ character.user.real_name|default:character.user.username }}
+                    </p>
+                    
+                    {% if membership.role == 'DM' or is_admin_viewing or character.user == user %}
+                    <a href="{% url 'campaigns:character_detail' character.pk %}" 
+                       style="color: #3794ff; font-size: 0.8rem; text-decoration: none; display: inline-block; margin-top: 0.5rem;">
+                        View Sheet →
+                    </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color: #aaa;">No characters yet.</p>
+            {% endif %}
+            
+            {% if membership.role == 'PLAYER' and not is_admin_viewing %}
+            <a href="{% url 'campaigns:create_character' campaign.pk %}" class="btn" style="margin-top: 1.5rem;">
+                + Create Character
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Right Column: Essential Sidebar Info Only -->
+    <div>
+        <!-- Dice Roller - Top Priority, aligned with chat top -->
+        {% if membership.role != 'SPECTATOR' and not is_admin_viewing %}
+        <div class="card" style="margin-bottom: 1.5rem;">
+            {% include 'campaigns/dice_roller.html' %}
+        </div>
+        {% endif %}
+        
+        <!-- Campaign Members -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3>Campaign Members</h3>
+            <ul style="list-style: none; line-height: 1.8;">
+                {% for mem in all_memberships %}
+                <li>
+                    <span class="role-badge role-{{ mem.role|lower }}" 
+                          style="font-size: 0.75rem; padding: 2px 6px; margin-right: 6px;">
+                        {{ mem.get_role_display }}
+                    </span>
+                    {% if mem.role == 'DM' %}
+                        <strong>{{ mem.user.real_name|default:mem.user.username }}</strong>
+                    {% else %}
+                        {{ mem.user.real_name|default:mem.user.username }}
+                    {% endif %}
+                    {% if mem.get_character_name %}
+                        <span style="color: #aaa; font-size: 0.9rem;">→ {{ mem.get_character_name }}</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <!-- DM/Player Actions -->
+        {% if membership.role == 'DM' and not is_admin_viewing %}
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3 style="color: #e94560;">DM Actions</h3>
+            <a href="{% url 'campaigns:manage_members' campaign.pk %}" 
+               class="btn btn-secondary" 
+               style="width: 100%; display: block; text-align: center; margin-bottom: 0.5rem;">
+                👥 Manage Members
+            </a>
+            <a href="{% url 'campaigns:delete_campaign' campaign.pk %}" 
+               class="btn btn-secondary" 
+               style="width: 100%; display: block; text-align: center; margin-bottom: 0.5rem; background-color: #c73e54;">
+                🗑️ Delete Campaign
+            </a>
+        </div>
+        {% endif %}
+        
+        {% if is_admin_viewing %}
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3 style="color: #9b5de5;">Admin Oversight</h3>
+            <a href="{% url 'campaigns:delete_campaign' campaign.pk %}" 
+               class="btn btn-secondary" 
+               style="width: 100%; display: block; text-align: center; margin-bottom: 0.5rem; background-color: #c73e54;">
+                🗑️ Delete Campaign
+            </a>
+        </div>
+        {% endif %}
+        
+        {% if membership.role != 'DM' and not is_admin_viewing %}
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <h3 style="color: #9b5de5;">Your Actions</h3>
+            <button onclick="leaveCampaign()" 
+                    class="btn btn-secondary" 
+                    style="width: 100%; display: block; text-align: center; background-color: #e94560; color: white;">
+                Exit Campaign
+            </button>
+        </div>
+        {% endif %}
+        
+        <!-- Campaign Info -->
+        <div class="card">
+            <h3>Campaign Info</h3>
+            <ul style="list-style: none; line-height: 2;">
+                <li><strong>Status:</strong> 
+                    {% if campaign.is_active %}
+                    <span style="color: #4caf50;">Active</span>
+                    {% else %}
+                    <span style="color: #f44336;">Inactive</span>
+                    {% endif %}
+                </li>
+                <li><strong>Created:</strong> {{ campaign.created_at|date:"M d, Y" }}</li>
+                {% if campaign.updated_at %}
+                <li><strong>Last Updated:</strong> {{ campaign.updated_at|date:"M d, Y H:i" }}</li>
+                {% endif %}
+                {% if campaign.last_message_date %}
+                <li><strong>Last Message:</strong> {{ campaign.last_message_date|date:"M d, Y H:i" }}</li>
+                {% else %}
+                <li><strong>Last Message:</strong> No messages yet</li>
+                {% endif %}
+                <li><strong>Total Members:</strong> {{ campaign.get_member_count }}</li>
+                <li><strong>Players:</strong> {{ campaign.get_player_count }}</li>
+                {% if campaign.get_dm %}
+                <li><strong>Dungeon Master:</strong> 
+                    {{ campaign.get_dm.real_name|default:campaign.get_dm.username }}
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Less Frequently Used Content Below -->
+<div style="margin-top: 2rem;">
+    <h2 style="color: #007acc; margin-bottom: 1rem;">📚 Campaign Resources</h2>
+    
+    <!-- Additional sections can be added here in the future -->
+    <div class="card">
+        <p style="color: #aaa;">Additional campaign resources and documentation will appear here.</p>
+    </div>
+</div>
+
+<script>
+async function leaveCampaign() {
+    // Show confirmation modal
+    showModal('Confirm Leaving Campaign', 'Are you sure you want to leave this campaign? You will lose access to all campaign content.', 'warning');
+    
+    // Set up the confirm button action
+    window.confirmAction = function() {
+        hideModal();
+        performLeaveCampaign();
+    };
+    
+    // Show confirm button
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    confirmBtn.style.display = 'inline-block';
+    confirmBtn.onclick = window.confirmAction;
+}
+
+async function performLeaveCampaign() {
+    try {
+        const response = await fetch('{% url "campaigns:leave_campaign" campaign.pk %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+        
+        // Redirect to dashboard on success
+        window.location.href = '{% url "campaigns:dashboard" %}';
+    } catch (error) {
+        showModal('Error', 'Failed to leave campaign. ' + error.message, 'error');
+    }
+}
+
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) return metaTag.content;
+    
+    const inputField = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (inputField) return inputField.value;
+    
+    const cookies = document.cookie.split('; ');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.split('=');
+        if (name === 'csrftoken') return value;
+    }
+    
+    return '';
+}
+
+// Custom Modal Functions
+function showModal(title, message, type = 'info') {
+    const modal = document.getElementById('customModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    
+    // Set color based on type
+    const iconElement = document.querySelector('.modal-icon');
+    if (type === 'success') {
+        iconElement.innerHTML = '✓';
+        iconElement.style.backgroundColor = '#4caf50';
+    } else if (type === 'error' || type === 'warning') {
+        iconElement.innerHTML = '!';
+        iconElement.style.backgroundColor = '#e94560';
+    } else {
+        iconElement.innerHTML = 'ℹ';
+        iconElement.style.backgroundColor = '#007acc';
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function hideModal() {
+    const modal = document.getElementById('customModal');
+    modal.style.display = 'none';
+    
+    // Hide confirm button
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    confirmBtn.style.display = 'none';
+    confirmBtn.onclick = null;
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('customModal');
+    if (event.target === modal) {
+        hideModal();
+    }
+});
+</script>
+
+<!-- Custom Modal -->
+<div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 9999; justify-content: center; align-items: center;">
+    <div style="background-color: #252526; border-radius: 12px; padding: 2rem; max-width: 450px; width: 90%; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border: 1px solid #007acc;">
+        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+            <div class="modal-icon" style="width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; color: white; margin-right: 1rem;"></div>
+            <h3 id="modalTitle" style="color: #007acc; margin: 0; flex: 1;">Modal Title</h3>
+        </div>
+        <p id="modalMessage" style="color: #d4d4d4; line-height: 1.6; margin-bottom: 1.5rem;"></p>
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button onclick="hideModal()" style="background-color: #3c3c3c; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-size: 1rem;">Cancel</button>
+            <button id="modalConfirmBtn" style="background-color: #007acc; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-size: 1rem; display: none;">Confirm</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

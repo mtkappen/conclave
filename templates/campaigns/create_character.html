@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if character %}Edit Character{% else %}Create Character{% endif %} - {{ campaign.title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 2rem auto;">
+    <div class="card">
+        <h2>🎭 {% if character %}Edit Character: {{ character.name }}{% else %}Create New Character{% endif %}</h2>
+        <p style="color: #aaa; margin-bottom: 1.5rem;">Campaign: {{ campaign.title }}</p>
+        
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label for="{{ form.name.id_for_label }}">Character Name</label>
+                    {{ form.name }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.class_name.id_for_label }}">Class</label>
+                    {{ form.class_name }}
+                </div>
+            </div>
+            
+            <label for="{{ form.level.id_for_label }}">Level</label>
+            {{ form.level }}
+            
+            <h3 style="margin: 1.5rem 0 1rem; color: #e94560;">Ability Scores</h3>
+            <p style="color: #aaa; margin-bottom: 1rem; font-size: 0.9rem;">
+                Tip: Standard array values are 15, 14, 13, 12, 10, 8. Adjust as needed!
+            </p>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                <div>
+                    <label for="{{ form.strength.id_for_label }}">Strength</label>
+                    {{ form.strength }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.dexterity.id_for_label }}">Dexterity</label>
+                    {{ form.dexterity }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.constitution.id_for_label }}">Constitution</label>
+                    {{ form.constitution }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.intelligence.id_for_label }}">Intelligence</label>
+                    {{ form.intelligence }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.wisdom.id_for_label }}">Wisdom</label>
+                    {{ form.wisdom }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.charisma.id_for_label }}">Charisma</label>
+                    {{ form.charisma }}
+                </div>
+            </div>
+            
+            <h3 style="margin: 1.5rem 0 1rem; color: #e94560;">Combat Stats</h3>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                <div>
+                    <label for="{{ form.health_points.id_for_label }}">Current HP</label>
+                    {{ form.health_points }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.max_health_points.id_for_label }}">Max HP</label>
+                    {{ form.max_health_points }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.armor_class.id_for_label }}">Armor Class</label>
+                    {{ form.armor_class }}
+                </div>
+            </div>
+            
+            <label for="{{ form.avatar.id_for_label }}">Character Avatar (Optional)</label>
+            {{ form.avatar }}
+            
+            <label for="{{ form.description.id_for_label }}">Description / Background</label>
+            {{ form.description }}
+            
+            <!-- First-time tutorial modal trigger -->
+            {% if not user.character_set.exists and not character %}
+            <div style="background-color: #0f3460; padding: 1rem; border-radius: 8px; margin: 1.5rem 0;">
+                <h4 style="color: #e94560; margin-bottom: 0.5rem;">🎓 First Time Character Creation?</h4>
+                <p style="font-size: 0.9rem; color: #aaa;">
+                    Need help? Check out our 
+                    <a href="#" onclick="alert('Strength: Physical power\nDexterity: Agility and reflexes\nConstitution: Health and endurance\nIntelligence: Knowledge and reasoning\nWisdom: Perception and insight\nCharisma: Charm and persuasion'); return false;" 
+                       style="color: #e94560;">stat guide</a>
+                </p>
+            </div>
+            {% endif %}
+            
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn">{% if character %}Update Character{% else %}Create Character{% endif %}</button>
+                <a href="{% url 'campaigns:campaign_detail' campaign.pk %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Simple stat explanation on hover
+document.querySelectorAll('input[id^="id_"]').forEach(function(input) {
+    input.addEventListener('mouseenter', function() {
+        // Could add tooltips here in future
+    });
+});
+</script>
+{% endblock %}

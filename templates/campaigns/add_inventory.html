@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Item - {{ character.name }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 2rem auto;">
+    <div class="card">
+        <h2>🎒 Add Inventory Item</h2>
+        <p style="color: #aaa; margin-bottom: 1.5rem;">Character: {{ character.name }}</p>
+        
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <label for="{{ form.name.id_for_label }}">Item Name</label>
+            {{ form.name }}
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label for="{{ form.quantity.id_for_label }}">Quantity</label>
+                    {{ form.quantity }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.weight.id_for_label }}">Weight (lbs)</label>
+                    {{ form.weight }}
+                </div>
+            </div>
+            
+            <label for="{{ form.description.id_for_label }}">Description</label>
+            {{ form.description }}
+            
+            <label for="{{ form.image.id_for_label }}">Item Image (Optional)</label>
+            {{ form.image }}
+            
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit" class="btn">Add Item</button>
+                <a href="{% url 'campaigns:character_detail' character.pk %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3>💡 Tips</h3>
+        <ul style="list-style-position: inside; line-height: 2; color: #aaa;">
+            <li>Add weapons, armor, potions, and adventuring gear</li>
+            <li>Track quantity for consumables like arrows or rations</li>
+            <li>Weight helps monitor encumbrance (optional)</li>
+            <li>Images make inventory more visual and fun!</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

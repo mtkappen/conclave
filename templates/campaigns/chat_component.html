@@ -1,0 +1,1060 @@
+{% load static %}
+<!-- Chat Component for Campaign Detail -->
+<div class="chat-container" id="chatContainer">
+    <!-- Chat Header -->
+    <div class="chat-header">
+        <h3 style="color: #007acc; margin: 0;">💬 Campaign Chat</h3>
+        <div class="chat-controls">
+            <button class="btn btn-secondary" id="refreshBtn" onclick="loadChatMessages()">🔄 Refresh</button>
+            <span id="lastUpdate" style="color: #858585; font-size: 0.85rem; margin-left: 1rem;"></span>
+        </div>
+    </div>
+
+    <!-- Message Tabs -->
+    <div class="chat-tabs">
+        <button class="tab-btn active" data-tab="all" onclick="switchTab('all')">All</button>
+        <button class="tab-btn" data-tab="story" onclick="switchTab('story')">📖 Story (IC)</button>
+        <button class="tab-btn" data-tab="game" onclick="switchTab('game')">⚔️ Game (OOC)</button>
+    </div>
+
+    <!-- Messages Area -->
+    <div class="chat-messages" id="chatMessages">
+        <div class="loading-spinner">Loading chat...</div>
+    </div>
+
+    <!-- Dice Roll Log (Collapsible) -->
+    <div class="dice-log" id="diceLog">
+        <button class="toggle-btn" onclick="toggleDiceLog()">🎲 Dice Rolls ▼</button>
+        <div class="dice-rolls" id="diceRolls"></div>
+    </div>
+
+    <!-- Message Input (For Players, Spectators, and DMs, not admins viewing) -->
+    {% if not is_admin_viewing %}
+    
+    <!-- Show character creation prompt for players without characters -->
+    {% if membership.role == 'PLAYER' and not has_character %}
+    <div style="background-color: #1a2d4e; border-left: 3px solid #00bbf9; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+        <p style="color: #d4d4d4; margin: 0 0 0.5rem 0;">
+            <strong>🎭 To speak In-Character, you need a character!</strong>
+        </p>
+        <a href="{% url 'campaigns:create_character' campaign.pk %}" class="btn" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+            + Create Your Character Now
+        </a>
+    </div>
+    {% endif %}
+    
+    <div class="chat-input-area">
+        <div class="input-controls">
+            <select id="messageType" class="form-control" style="width: auto; margin-bottom: 0;">
+                <option value="OOC_RELEVANT">🗣️ Out of Character</option>
+                {% if membership.role == 'PLAYER' and has_character %}
+                <option value="IC">🎭 In Character</option>
+                {% endif %}
+                {% if membership.role == 'DM' %}
+                <option value="OOC_RELEVANT">🗣️ Out of Character (DM)</option>
+                {% endif %}
+            </select>
+            
+            <select id="visibilityType" class="form-control" style="width: auto; margin-bottom: 0;" onchange="toggleRecipientSelect()">
+                <option value="PUBLIC">👥 Public</option>
+                {% if membership.role == 'PLAYER' %}
+                <option value="DM_ONLY">🔒 Send to DM Only</option>
+                {% endif %}
+                {% if membership.role == 'DM' %}
+                <option value="PLAYER_WHISPER">💬 Whisper to Player</option>
+                <option value="SPECTATOR_WHISPER">💬 Whisper to Spectator</option>
+                {% endif %}
+            </select>
+            
+            <!-- Recipient selector (only for DM whispers) -->
+            <select id="recipientSelect" class="form-control" style="width: auto; margin-bottom: 0; display: none;">
+                {% if membership.role == 'DM' %}
+                    {% for mem in all_memberships %}
+                        {% if mem.role == 'PLAYER' %}
+                            <option value="player_{{ mem.user.pk }}">{{ mem.user.real_name|default:mem.user.username }} (Player)</option>
+                        {% elif mem.role == 'SPECTATOR' %}
+                            <option value="spectator_{{ mem.user.pk }}">{{ mem.user.real_name|default:mem.user.username }} (Spectator)</option>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+        
+        <!-- Editor Toolbar -->
+        <div class="editor-toolbar" id="editorToolbar">
+            <button type="button" class="toolbar-btn" onclick="execFormat('bold')" title="Bold (Ctrl+B)">
+                <strong>B</strong>
+            </button>
+            <button type="button" class="toolbar-btn" onclick="execFormat('italic')" title="Italic (Ctrl+I)">
+                <em>I</em>
+            </button>
+            <button type="button" class="toolbar-btn" onclick="execFormat('underline')" title="Underline (Ctrl+U)">
+                <u>U</u>
+            </button>
+            <button type="button" class="toolbar-btn" onclick="execFormat('strikeThrough')" title="Strikethrough">
+                <s>S</s>
+            </button>
+            <div class="toolbar-divider"></div>
+            <button type="button" class="toolbar-btn" onclick="execFormat('justifyLeft')" title="Align Left">⬅️</button>
+            <button type="button" class="toolbar-btn" onclick="execFormat('justifyCenter')" title="Align Center">↔️</button>
+            <button type="button" class="toolbar-btn" onclick="execFormat('justifyRight')" title="Align Right">➡️</button>
+            <div class="toolbar-divider"></div>
+            <button type="button" class="toolbar-btn" onclick="execFormat('insertUnorderedList')" title="Bullet List">•</button>
+            <button type="button" class="toolbar-btn" onclick="execFormat('insertOrderedList')" title="Numbered List">1.</button>
+            <div class="toolbar-divider"></div>
+            <button type="button" class="toolbar-btn" onclick="execFormat('removeFormat')" title="Clear Formatting">🧹</button>
+        </div>
+        
+        <!-- Editor Container -->
+        <div class="editor-container">
+            <div id="messageInput" class="form-control editor-contenteditable" contenteditable="true" 
+                 placeholder="Type your message... (Ctrl+Enter to send)" role="textbox" aria-multiline="true"></div>
+        </div>
+        
+        <!-- Editor Footer -->
+        <div class="editor-footer">
+            <span style="color: #858585; font-size: 0.85rem;">💡 Tip: Use Ctrl+Enter to send, toolbar buttons to format</span>
+        </div>
+        
+        <button class="btn" onclick="sendMessage()" style="margin-top: 1rem;">Send Message</button>
+    </div>
+    {% endif %}
+
+    <!-- DM Controls (only for actual DMs, not admins viewing) -->
+    {% if membership.role == 'DM' and not is_admin_viewing|default:false %}
+    <div class="dm-controls">
+        <hr style="border-color: #3c3c3c; margin: 1rem 0;">
+        <h4 style="color: #9b5de5; margin-bottom: 0.5rem;">🎮 DM Controls</h4>
+        
+        <div class="dm-tools">
+            <button class="btn btn-secondary" onclick="showSplitPartyModal()">⚔️ Split Party Mode</button>
+            <button class="btn btn-secondary" onclick="showModerationPanel()">📝 Moderation Tools</button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Admin Moderation (for admins viewing without membership) -->
+    {% if is_admin_viewing|default:false %}
+    <div class="dm-controls">
+        <hr style="border-color: #3c3c3c; margin: 1rem 0;">
+        <h4 style="color: #9b5de5; margin-bottom: 0.5rem;">🛡️ Admin Moderation</h4>
+        <p style="color: #d4d4d4; font-size: 0.9rem; margin-bottom: 0.5rem;">
+            You can delete inappropriate messages as a system administrator.
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.chat-container {
+    background-color: #252526;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    border: 1px solid #3c3c3c;
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.chat-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chat-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.tab-btn {
+    padding: 0.5rem 1rem;
+    background-color: #3c3c3c;
+    color: #d4d4d4;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.tab-btn:hover {
+    background-color: #4c4c4c;
+}
+
+.tab-btn.active {
+    background-color: #007acc;
+}
+
+.chat-messages {
+    height: 500px;
+    overflow-y: auto;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid #3c3c3c;
+}
+
+.message-bubble {
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    background-color: #2d2d30;
+    position: relative;
+    max-width: 80%;
+}
+
+.message-bubble.public {
+    border-left: 3px solid #858585;
+}
+
+.message-bubble.dm-only {
+    border-left: 3px solid #9b5de5;
+    background-color: #2d1b4e;
+}
+
+.message-bubble.dm-only.whisper-to-me {
+    border-left: 3px solid #00bbf9;
+    background-color: #1a2d4e;
+}
+
+.message-bubble.split-group {
+    border-left: 3px solid #00bbf9;
+    background-color: #1a2d4e;
+}
+
+/* User's own messages on the right */
+.message-bubble.user-message {
+    margin-left: auto;
+    margin-right: 0;
+    background-color: #007acc;
+    border-left: none;
+    border-right: 3px solid #00bbf9;
+}
+
+.message-bubble.user-message .sender-name {
+    color: white;
+}
+
+.message-bubble.user-message .message-content {
+    color: white;
+}
+
+.message-bubble.user-message .message-time {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.message-bubble.user-message .message-actions {
+    right: auto;
+    left: 0.5rem;
+}
+
+.message-bubble.user-message .action-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.message-bubble.user-message .action-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.sender-name {
+    font-weight: bold;
+    color: #007acc;
+}
+
+.spectator-badge {
+    background-color: #f15bb5;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+.message-time {
+    font-size: 0.8rem;
+    color: #858585;
+}
+
+.message-content {
+    color: #d4d4d4;
+    line-height: 1.6;
+}
+
+/* Rich text message styling */
+.message-html b, .message-html strong {
+    font-weight: bold;
+}
+
+.message-html i, .message-html em {
+    font-style: italic;
+}
+
+.message-html u {
+    text-decoration: underline;
+}
+
+.message-html s, .message-html strike {
+    text-decoration: line-through;
+}
+
+.message-html ul, .message-html ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.message-html li {
+    margin: 0.25rem 0;
+}
+
+.message-html blockquote {
+    border-left: 3px solid #9b5de5;
+    padding-left: 1rem;
+    margin: 0.5rem 0;
+    color: #858585;
+    font-style: italic;
+}
+
+.message-html pre {
+    background-color: #2d2d30;
+    padding: 0.75rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+    margin: 0.5rem 0;
+}
+
+.message-html code {
+    background-color: #2d2d30;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+}
+
+.message-html a {
+    color: #007acc;
+    text-decoration: underline;
+}
+
+.message-html img {
+    max-width: 100%;
+    border-radius: 4px;
+    margin: 0.5rem 0;
+}
+
+.edited-indicator {
+    font-size: 0.75rem;
+    color: #888;
+    margin-left: 0.5rem;
+}
+
+.message-actions {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: none;
+    gap: 0.5rem;
+}
+
+.message-bubble:hover .message-actions {
+    display: flex;
+}
+
+.action-btn {
+    background-color: #3c3c3c;
+    color: #d4d4d4;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+
+.action-btn:hover {
+    background-color: #4c4c4c;
+}
+
+.dice-log {
+    margin-top: 1rem;
+}
+
+.toggle-btn {
+    width: 100%;
+    padding: 0.5rem;
+    background-color: #3c3c3c;
+    color: #d4d4d4;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.dice-rolls {
+    display: none;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 0.5rem;
+}
+
+.dice-roll-item {
+    padding: 0.5rem;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+.dice-roll-formula {
+    color: #9b5de5;
+    font-weight: bold;
+}
+
+.dice-roll-result {
+    color: #007acc;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.chat-input-area {
+    margin-top: 1rem;
+}
+
+.input-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Editor Toolbar Styles */
+.editor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    background-color: #2d2d30;
+    border: 1px solid #3c3c3c;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+}
+
+.toolbar-btn {
+    padding: 0.4rem 0.6rem;
+    background-color: transparent;
+    color: #d4d4d4;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.toolbar-btn:hover {
+    background-color: #3c3c3c;
+    border-color: #007acc;
+}
+
+.toolbar-btn.active {
+    background-color: #007acc;
+    color: white;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(1px);
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background-color: #3c3c3c;
+    margin: 0 0.25rem;
+}
+
+/* Editor Container */
+.editor-container {
+    position: relative;
+}
+
+.editor-contenteditable {
+    min-height: 120px;
+    max-height: 400px;
+    overflow-y: auto;
+    border-radius: 0 0 6px 6px;
+    background-color: #1e1e1e;
+    border: 1px solid #3c3c3c;
+    padding: 0.75rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #d4d4d4;
+    outline: none;
+}
+
+.editor-contenteditable:focus {
+    border-color: #007acc;
+}
+
+.editor-contenteditable:empty:before {
+    content: attr(placeholder);
+    color: #666;
+    pointer-events: none;
+}
+
+/* Rich text formatting styles */
+.editor-contenteditable b, .editor-contenteditable strong {
+    font-weight: bold;
+}
+
+.editor-contenteditable i, .editor-contenteditable em {
+    font-style: italic;
+}
+
+.editor-contenteditable u {
+    text-decoration: underline;
+}
+
+.editor-contenteditable s, .editor-contenteditable strike {
+    text-decoration: line-through;
+}
+
+.editor-contenteditable ul, .editor-contenteditable ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.editor-contenteditable li {
+    margin: 0.25rem 0;
+}
+
+.editor-contenteditable blockquote {
+    border-left: 3px solid #9b5de5;
+    padding-left: 1rem;
+    margin: 0.5rem 0;
+    color: #858585;
+    font-style: italic;
+}
+
+.editor-contenteditable pre {
+    background-color: #2d2d30;
+    padding: 0.75rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+}
+
+.editor-contenteditable code {
+    background-color: #2d2d30;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+}
+
+/* Editor Footer */
+.editor-footer {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    background-color: #2d2d30;
+    border: 1px solid #3c3c3c;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    margin-bottom: 0.5rem;
+}
+
+.dm-controls {
+    margin-top: 1.5rem;
+}
+
+.dm-tools {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.loading-spinner {
+    text-align: center;
+    color: #666;
+    padding: 2rem;
+}
+
+.hidden-roll {
+    filter: blur(4px);
+    cursor: pointer;
+    transition: filter 0.3s;
+}
+
+.hidden-roll:hover {
+    filter: blur(0);
+}
+
+.hidden-roll.revealed {
+    filter: none;
+}
+</style>
+
+<script>
+let currentTab = 'all';
+let autoRefreshInterval;
+// Use Django template variable with fallback to prevent JS syntax errors during linting
+const CAMPAIGN_ID = "{{ campaign.pk }}" || 0;
+
+// Initialize chat on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadChatMessages();
+    startAutoRefresh();
+});
+
+function startAutoRefresh() {
+    autoRefreshInterval = setInterval(loadChatMessages, 4000); // Refresh every 4 seconds
+}
+
+function stopAutoRefresh() {
+    clearInterval(autoRefreshInterval);
+}
+
+async function loadChatMessages() {
+    try {
+        const response = await fetch(`/campaign/${CAMPAIGN_ID}/chat/messages/`);
+        const data = await response.json();
+        
+        renderMessages(data.messages);
+        renderDiceRolls(data.dice_rolls);
+        
+        // Update last update time
+        const now = new Date();
+        document.getElementById('lastUpdate').textContent = 'Last updated: ' + now.toLocaleTimeString();
+    } catch (error) {
+        console.error('Error loading messages:', error);
+    }
+}
+
+function renderMessages(messages) {
+    const container = document.getElementById('chatMessages');
+    
+    if (messages.length === 0) {
+        container.innerHTML = '<p style="color: #666; text-align: center;">No messages yet. Start the adventure!</p>';
+        return;
+    }
+    
+    let html = '';
+    
+    messages.forEach(msg => {
+        // Filter by tab
+        if (currentTab === 'story' && msg.message_type !== 'IC') return;
+        if (currentTab === 'game' && msg.message_type === 'IC') return;
+        
+        const visibilityClass = msg.visibility_type.toLowerCase().replace('_', '-');
+        const isDMOnly = msg.visibility_type === 'DM_ONLY';
+        const isSpectator = msg.is_spectator || false;
+        
+        // Check if this is a DM whisper to the current user
+        const isWhisperToMe = msg.is_dm_whisper_to_me || false;
+        
+        // Check if this message was sent by the current user
+        const currentUserPk = "{{ user.pk }}";
+        const isUserMessage = String(msg.sender_id) === currentUserPk;
+        
+        // Add special class for whispers to me and user's own messages
+        let bubbleClass = isWhisperToMe ? `${visibilityClass} whisper-to-me` : visibilityClass;
+        if (isUserMessage) {
+            bubbleClass += ' user-message';
+        }
+        
+        html += `
+            <div class="message-bubble ${bubbleClass}" data-id="${msg.id}">
+                <div class="message-header">
+                    <span>
+                        <span class="sender-name">${escapeHtml(msg.sender_name)}</span>
+                        ${isSpectator ? '<span class="spectator-badge">Spectator</span>' : ''}
+                        ${isWhisperToMe ? '<span class="whisper-badge" style="background-color: #00bbf9; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">DM Whisper</span>' : ''}
+                        ${msg.is_edited ? '<span class="edited-indicator">(Edited)</span>' : ''}
+                    </span>
+                    <div class="message-actions">
+                        <button class="action-btn" onclick="editMessage(${msg.id})">✏️ Edit</button>
+                        <button class="action-btn" onclick="deleteMessage(${msg.id})">🗑️ Delete</button>
+                    </div>
+                </div>
+                <div class="message-content message-html">${msg.content}</div>
+                <div class="message-time">${msg.formatted_time}</div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html || '<p style="color: #666; text-align: center;">No messages in this view.</p>';
+}
+
+function renderDiceRolls(rolls) {
+    const container = document.getElementById('diceRolls');
+    
+    if (rolls.length === 0) {
+        container.innerHTML = '<p style="color: #666; text-align: center;">No dice rolls yet.</p>';
+        return;
+    }
+    
+    let html = '';
+    
+    rolls.forEach(roll => {
+        const isHidden = roll.visibility === 'DM_ONLY';
+        
+        html += `
+            <div class="dice-roll-item">
+                <span>
+                    <strong>${escapeHtml(roll.sender_name)}</strong>: 
+                    <span class="dice-roll-formula">${escapeHtml(roll.formula)}</span>
+                    ${isHidden ? ' 🔒' : ''}
+                </span>
+                <span class="dice-roll-result">${isHidden ? '???' : roll.result}</span>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function switchTab(tab) {
+    currentTab = tab;
+    
+    // Update active button
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.tab === tab) {
+            btn.classList.add('active');
+        }
+    });
+    
+    loadChatMessages();
+}
+
+function toggleRecipientSelect() {
+    const visibilityType = document.getElementById('visibilityType').value;
+    const recipientSelect = document.getElementById('recipientSelect');
+    
+    if (visibilityType === 'PLAYER_WHISPER' || visibilityType === 'SPECTATOR_WHISPER') {
+        recipientSelect.style.display = 'inline-block';
+    } else {
+        recipientSelect.style.display = 'none';
+    }
+}
+
+async function sendMessage() {
+    const editor = document.getElementById('messageInput');
+    const messageType = document.getElementById('messageType').value;
+    const visibilityType = document.getElementById('visibilityType').value;
+    
+    // Get HTML content from the contenteditable div
+    const content = editor.innerHTML.trim();
+    const plainText = editor.textContent.trim();
+    
+    if (!plainText) {
+        alert('Please enter a message.');
+        return;
+    }
+    
+    // For DM whispers, ensure recipient is selected
+    let recipientUserId = null;
+    if (visibilityType === 'PLAYER_WHISPER' || visibilityType === 'SPECTATOR_WHISPER') {
+        const recipientSelect = document.getElementById('recipientSelect');
+        const selectedValue = recipientSelect.value;
+        
+        if (!selectedValue) {
+            alert('Please select a recipient.');
+            return;
+        }
+        
+        // Extract user ID from value (e.g., "player_123" -> 123)
+        recipientUserId = parseInt(selectedValue.split('_')[1]);
+    }
+    
+    try {
+        const response = await fetch(`/campaign/${CAMPAIGN_ID}/chat/post/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                content: content,  // Send HTML content
+                message_type: messageType,
+                visibility_type: visibilityType,
+                recipient_user_id: recipientUserId
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            editor.innerHTML = '';  // Clear the editor
+            loadChatMessages();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error sending message:', error);
+        alert('Failed to send message.');
+    }
+}
+
+async function editMessage(messageId) {
+    // Get the message content from the DOM (it's now HTML)
+    const messageBubble = document.querySelector(`.message-bubble[data-id="${messageId}"]`);
+    if (!messageBubble) return;
+    
+    const messageContentEl = messageBubble.querySelector('.message-content');
+    const currentContent = messageContentEl ? messageContentEl.innerHTML : '';
+    
+    // Show confirmation modal for editing
+    showModal('Edit Message', 'Enter your new message content below:', 'info');
+    
+    // Create a temporary rich text editor in the modal
+    const modal = document.getElementById('customModal');
+    const modalMessage = modal.querySelector('p[id="modalMessage"]');
+    
+    // Remove any existing input fields first
+    const existingInput = modal.querySelector('#editMessageEditor');
+    if (existingInput) {
+        existingInput.remove();
+    }
+    
+    // Create and insert the contenteditable div with current content pre-filled
+    const editorDiv = document.createElement('div');
+    editorDiv.id = 'editMessageEditor';
+    editorDiv.className = 'form-control';
+    editorDiv.contentEditable = 'true';
+    editorDiv.style.cssText = 'width: 100%; min-height: 120px; padding: 0.75rem; background-color: #2d2d30; border: 1px solid #3c3c3c; color: #d4d4d4; border-radius: 6px; margin-bottom: 1rem; resize: vertical; font-family: inherit;';
+    editorDiv.innerHTML = currentContent;
+    
+    // Insert after the modal message paragraph
+    modalMessage.after(editorDiv);
+    
+    // Focus and place cursor at end for easy editing
+    setTimeout(() => {
+        editorDiv.focus();
+        document.execCommand('selectAll', false, null);
+    }, 100);
+    
+    // Set up the confirm button action
+    window.confirmAction = function() {
+        const newContent = editorDiv.innerHTML.trim();
+        const plainText = editorDiv.textContent.trim();
+        if (!plainText) {
+            showModal('Error', 'Please enter a message.', 'error');
+            return;
+        }
+        
+        hideModal();
+        performEditMessage(messageId, newContent);
+    };
+    
+    // Show confirm button
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    confirmBtn.style.display = 'inline-block';
+    confirmBtn.textContent = 'Save Changes';
+    confirmBtn.onclick = window.confirmAction;
+}
+
+async function performEditMessage(messageId, newContent) {
+    try {
+        const response = await fetch(`/chat/message/${messageId}/edit/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ content: newContent })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            loadChatMessages();
+        } else {
+            showModal('Error', 'Failed to edit message. ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error editing message:', error);
+        showModal('Error', 'Failed to edit message.', 'error');
+    }
+}
+
+async function deleteMessage(messageId) {
+    // Show confirmation modal for deletion - NO input fields, just text
+    const modal = document.getElementById('customModal');
+    
+    // Make sure no textarea exists in the modal before showing
+    const existingInput = modal.querySelector('#editMessageInput');
+    if (existingInput) {
+        existingInput.remove();
+    }
+    
+    showModal('Confirm Deletion', 'Are you sure you want to delete this message? This action cannot be undone.', 'warning');
+    
+    // Set up the confirm button action
+    window.confirmAction = function() {
+        hideModal();
+        performDeleteMessage(messageId);
+    };
+    
+    // Show confirm button
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    confirmBtn.style.display = 'inline-block';
+    confirmBtn.textContent = 'Delete';
+    confirmBtn.onclick = window.confirmAction;
+}
+
+async function performDeleteMessage(messageId) {
+    try {
+        const response = await fetch(`/chat/message/${messageId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            loadChatMessages();
+        } else {
+            showModal('Error', 'Failed to delete message. ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting message:', error);
+        showModal('Error', 'Failed to delete message.', 'error');
+    }
+}
+
+// Reset modal when hiding - remove any temporary input fields
+function hideModal() {
+    const modal = document.getElementById('customModal');
+    modal.style.display = 'none';
+    
+    // Remove any temporary input fields
+    const editInput = modal.querySelector('#editMessageInput');
+    if (editInput) editInput.remove();
+    
+    // Reset confirm button to default state
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    confirmBtn.style.display = 'none';
+    confirmBtn.textContent = 'Confirm';
+    confirmBtn.onclick = null;
+}
+
+function toggleDiceLog() {
+    const rolls = document.getElementById('diceRolls');
+    const btn = document.querySelector('.toggle-btn');
+    
+    if (rolls.style.display === 'block') {
+        rolls.style.display = 'none';
+        btn.textContent = '🎲 Dice Rolls ▼';
+    } else {
+        rolls.style.display = 'block';
+        btn.textContent = '🎲 Dice Rolls ▲';
+    }
+}
+
+function showSplitPartyModal() {
+    alert('Split Party Mode - Coming in Phase 3!');
+}
+
+function showModerationPanel() {
+    alert('Moderation Tools - Coming in Phase 4!');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+           document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+}
+
+// Rich Text Editor Functions
+function execFormat(command, value = null) {
+    document.execCommand(command, false, value);
+    // Focus back on the editor
+    document.getElementById('messageInput').focus();
+    updateToolbarState();
+}
+
+function updateToolbarState() {
+    const editor = document.getElementById('messageInput');
+    
+    // Check if editor exists and has focus
+    if (!editor || document.activeElement !== editor) {
+        document.querySelectorAll('.toolbar-btn').forEach(btn => btn.classList.remove('active'));
+        return;
+    }
+    
+    // Update button states based on current formatting at cursor position
+    const buttons = {
+        'bold': document.querySelector("button[onclick=\"execFormat('bold')\"]"),
+        'italic': document.querySelector("button[onclick=\"execFormat('italic')\"]"),
+        'underline': document.querySelector("button[onclick=\"execFormat('underline')\"]"),
+        'strikeThrough': document.querySelector("button[onclick=\"execFormat('strikeThrough')\"]"),
+        'justifyLeft': document.querySelector("button[onclick=\"execFormat('justifyLeft')\"]"),
+        'justifyCenter': document.querySelector("button[onclick=\"execFormat('justifyCenter')\"]"),
+        'justifyRight': document.querySelector("button[onclick=\"execFormat('justifyRight')\"]")
+    };
+    
+    // Check each formatting type
+    for (const [format, button] of Object.entries(buttons)) {
+        if (button) {
+            const isActive = document.queryCommandState(format);
+            button.classList.toggle('active', isActive);
+        }
+    }
+}
+
+// Add keyboard shortcuts for rich text editor
+document.addEventListener('DOMContentLoaded', function() {
+    const editor = document.getElementById('messageInput');
+    
+    if (editor) {
+        // Ctrl+Enter to send
+        editor.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+            
+            // Handle tab key to insert spaces instead of changing focus
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                document.execCommand('insertText', false, '    ');
+            }
+        });
+        
+        // Update toolbar state on input and cursor movement
+        editor.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            updateToolbarState();
+        });
+        
+        editor.addEventListener('keyup', updateToolbarState);
+        editor.addEventListener('mouseup', updateToolbarState);
+        editor.addEventListener('focus', updateToolbarState);
+        editor.addEventListener('blur', function() {
+            // Remove active states when focus is lost
+            document.querySelectorAll('.toolbar-btn').forEach(btn => btn.classList.remove('active'));
+        });
+    }
+});
+</script>

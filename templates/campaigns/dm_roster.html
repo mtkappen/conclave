@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Party Roster - {{ campaign.title }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="{% url 'campaigns:campaign_detail' campaign.pk %}" class="btn btn-secondary" style="margin-bottom: 1rem;">← Back to Campaign</a>
+    
+    <h1>📋 Party Roster - {{ campaign.title }}</h1>
+    <p style="color: #d4d4d4; margin-top: 0.5rem;">DM View - All Character Sheets</p>
+</div>
+
+{% if characters %}
+<div class="card">
+    <div style="display: grid; gap: 1.5rem;">
+        {% for character in characters %}
+        <div style="background-color: #1e1e1e; padding: 1.5rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #3c3c3c;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                {% if character.avatar %}
+                <img src="{{ character.avatar.url }}" alt="{{ character.name }}" 
+                     style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                {% else %}
+                <div style="width: 60px; height: 60px; border-radius: 50%; background-color: #3c3c3c; display: flex; align-items: center; justify-content: center; color: #007acc; font-weight: bold;">
+                    {{ character.name|first }}
+                </div>
+                {% endif %}
+                
+                <div>
+                    <h3 style="color: #007acc; margin-bottom: 0.25rem;">{{ character.name }}</h3>
+                    <p style="font-size: 0.9rem; color: #d4d4d4;">
+                        {{ character.class_name }} - Level {{ character.level }}
+                    </p>
+                    <p style="font-size: 0.85rem; color: #858585;">
+                        Player: {{ character.user.real_name|default:character.user.username }}
+                    </p>
+                </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="text-align: right;">
+                    <p style="font-size: 0.9rem;"><strong>HP:</strong> {{ character.health_points }}/{{ character.max_health_points }}</p>
+                    <p style="font-size: 0.9rem;"><strong>AC:</strong> {{ character.armor_class }}</p>
+                </div>
+                
+                <a href="{% url 'campaigns:character_detail' character.pk %}" class="btn">View Sheet</a>
+                
+                {% if character.user == user %}
+                <a href="{% url 'campaigns:delete_character' character.pk %}" 
+                   class="btn btn-secondary" 
+                   style="background-color: #c73e54; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                    🗑️ Delete
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+    <h3>🎲 DM Quick Actions</h3>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" disabled>Start Session (Coming Soon)</button>
+        <button class="btn btn-secondary" disabled>Manage Split Party (Coming Soon)</button>
+        <button class="btn btn-secondary" disabled>View Chat Logs (Coming Soon)</button>
+    </div>
+</div>
+
+{% else %}
+<div class="card" style="text-align: center; padding: 3rem;">
+    <h2 style="color: #007acc;">No Characters Yet</h2>
+    <p style="margin: 1rem 0; color: #d4d4d4;">Players haven't created characters for this campaign yet.</p>
+    <a href="{% url 'campaigns:campaign_detail' campaign.pk %}" class="btn">Back to Campaign</a>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top: 2rem;">
+    <h3 style="color: #007acc;">👁️ DM Features Available Here</h3>
+    <ul style="list-style-position: inside; line-height: 2; color: #d4d4d4;">
+        <li><strong>View All Characters:</strong> Access any player's character sheet at any time</li>
+        <li><strong>Monitor HP/AC:</strong> Quick overview of combat stats</li>
+        <li><strong>Track Party Composition:</strong> See classes and levels at a glance</li>
+        <li><strong>Reference During Play:</strong> No need to ask players to share sheets!</li>
+    </ul>
+</div>
+{% endblock %}

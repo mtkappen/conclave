@@ -1,0 +1,192 @@
+
+## 1. Executive Summary
+A lightweight, self-contained Python web application designed for small **Dungeons and Dragons** groups (up to 12 active players plus spectators). It runs on a local network without secure connections (**Hypertext Transfer Protocol Secure**) or external cloud storage. The focus is on simplicity of deployment while maintaining robust character management, dice rolling, and a sophisticated chat system with **Dungeon Master** controlled visibility, dynamic split-party capabilities, spectator access, and comprehensive character sheet oversight for the game leader.
+
+## 2. Technology Stack (Simplified & Restricted)
+To comply with the "no admin privileges" constraint, we will use user-space tools only. No external database servers or message brokers are required.
+
+*   **Backend Framework:** Django (Python). It handles authentication and database management out of the box.
+*   **Database:** SQLite. A file-based database requiring no server installation or administrative rights. Perfect for a single-host setup.
+*   **Real-Time Communication:** Background Updates. Instead of complex WebSocket services, the chat will refresh automatically every 3-5 seconds via standard web requests. This is robust and requires zero additional infrastructure.
+*   **File Storage:** Local File System. Images are saved directly to a folder on the hosting machine.
+*   **Server:** Django Development Server or WSGI (Web Server Gateway Interface) server. Runs on a high port which does not require root/admin access to bind.
+*   **Environment Management:** Python Virtual Environment. All dependencies will be installed locally within the project folder, avoiding system-wide installation needs.
+
+## 3. User Roles & Permissions
+The system requires a granular permission structure based on Campaigns.
+
+1.  **Super Administrator:**
+    *   Full access to all campaigns.
+    *   Can assign **Dungeon Master** roles to users per campaign.
+    *   Can change the status of a player's message to In character, out of character relevant, or out of character off topic.
+    *   Access to export/archive tools.
+2.  **Dungeon Master (DM):**
+    *   Assigned per Campaign by Administrator.
+    *   Can view private messages from players and spectators.
+    *   **Can view all Character Sheets** belonging to players in their campaign (for reference during gameplay).
+    *   Can moderate chat (edit/delete player comments).
+    *   Can change the status of a player's message to In character, out of character relevant, or out of character off topic.
+    *   Controls Split Party Mode, visibility settings, and dynamic group assignments.
+3.  **Player:**
+    *   Access to their own character sheets, inventory, and dice roller.
+    *   Access to campaign chat.
+    *   Ability to toggle In-Character or Out-of-Character status on messages.
+4.  **Spectator:**
+    *   Read-only access to Campaign Stats (optional).
+    *   Access to view the main campaign chat stream.
+    *   Can post comments in the chat, but they are clearly marked as "Spectator".
+    *   Cannot see private **Dungeon Master** whispers or split-party secrets unless revealed.
+
+## 4. Data Model Architecture (Updated)
+The database schema is updated to support dynamic group management and character sheet access.
+
+*   **User:** Standard user profile with Real Name and Avatar.
+*   **Campaign:** Title, Description, Active Status.
+*   **CampaignMembership:** Links Users to Campaigns with a specific Role (Administrator, **Dungeon Master**, Player, Spectator).
+*   **Character:** Linked to User and Campaign. Contains stats, health points, armor class, level, class, and Name. *Accessible by DM.*
+*   **InventoryItem:** Linked to Character. Name, Quantity, Weight, Description, Image.
+*   **PartyGroup:** Created by **Dungeon Master** during a session. Contains a list of Players currently in that specific group. Used for Split Party Mode. *This table is editable at any time.*
+*   **ChatMessage:**
+    *   Content (Text)
+    *   Sender (User)
+    *   Campaign
+    *   **Visibility Type:** `Public`, `DM_Only`, `Split_Group`.
+    *   **PartyGroup ID:** Linked if Visibility is `Split_Group`.
+    *   **Reveal_Status:** `Hidden` or `Revealed_To_All`. (Controls post-split visibility).
+    *   **Type:** `In-Character`, `Out-of-Character_Relevant`, `Out-of-Character_OffTopic`.
+    *   Is_Edited (Boolean)
+*   **DiceRollLog:** Formula, Result, Modifier.
+    *   **Visibility:** `Public` or `DM_Only`.
+
+## 5. Core Feature Modules
+
+### A. Deployment & Configuration
+*   **Virtual Environment:** Setup script to create a local environment and install dependencies.
+*   **Settings:** Configure settings for:
+    *   Debug mode enabled (for easier troubleshooting on the network).
+    *   Allowed Hosts set to the local network address.
+    *   Secure Redirect disabled (since no secure connection is used).
+*   **Media Folder:** Ensure the folder for images has write permissions for the user running the script.
+
+### B. Character Management & Onboarding
+*   **First-Time Tutorial:** When a User creates their first character, they are presented with an interactive modal or guided step-by-step process. This includes:
+    *   Tooltips explaining stats (Strength, Dexterity, etc.).
+    *   Example values for Health Points and Armor Class.
+    *   Instructions on how to upload images.
+*   **DM Access:** The **Dungeon Master** interface includes a "Party Roster" view where they can click any player's name to open their full Character Sheet without needing the player to share it manually.
+
+### C. Chat System & Visibility Logic
+This is the core interaction point, updated with Spectator and Naming requirements.
+
+**1. Message Posting & Naming:**
+*   **In-Character Dialogue:** When a Player sends an `In-Character` message, the chat bubble displays their **Character Name**, not their login name.
+*   **Out-of-Character Dialogue:** Displays the User's Real Name.
+*   **Spectator Comments:** Spectators can post to the main chat stream. Their messages are clearly labeled with a "Spectator" badge or tag next to their name. They cannot send `In-Character` dialogue as they do not have characters in the campaign.
+*   **DM Whisper:** User selects "Send to DM". The message bubble appears in a distinct color (e.g., Dark Purple) for the DM. Other players and Spectators do not see this message at all.
+
+**2. Split Party Mode (Dynamic Control):**
+*   **Activation:** DM clicks "Start Split Session."
+*   **Configuration:** DM assigns players to Groups (e.g., Group A, Group B).
+*   **Dynamic Reassignment:** The DM can edit the membership of these groups at any time during the campaign. If a player moves from Group A to Group B, their future messages will route to Group B's chat stream. Past messages remain linked to the group they were sent in (preserving history accuracy).
+*   **Chat Segregation:** Players in Group A only see messages from Group A + DM whispers. They cannot see Group B's chat. Spectators generally see the Public stream unless configured otherwise by the DM.
+*   **Rejoining:** When DM ends Split Mode:
+    *   Option 1: **Merge & Reveal.** All split-party chats become visible to the whole group (marked as "Previously Hidden").
+    *   Option 2: **Merge & Keep Private.** Chats remain hidden from the other groups permanently.
+
+**3. Moderation Workflow:**
+*   **DM/Admin View:** A sidebar or toggle shows untagged messages.
+*   **Keyboard Navigation:** `J` and `K` keys to move up/down, `Space` key to tag (In-Character/Out-of-Character).
+*   **Editing:** DM can edit/delete any message. Edited messages show "(Edited)" timestamp.
+
+### D. Dice Roller & Privacy
+*   **Public Roll:** Standard roll visible in chat for all players and Spectators.
+*   **Hidden Roll:** Player selects "Hide from Players".
+    *   Result is sent to the Chat Log but marked as `[Roll Hidden]`.
+    *   DM can click to reveal the actual number.
+    *   Prevents players from seeing each other's stealth or perception checks before the DM adjudicates them.
+
+### E. Archival & Export
+*   **Export Trigger:** Administrator or DM clicks "Export Campaign."
+*   **Process:** Python script creates a compressed archive (ZIP file) containing the media folder relevant to that campaign plus chat logs (Comma-Separated Values format) and character stats (**JavaScript Object Notation** format).
+*   **Download:** Browser downloads the ZIP file directly. No cloud storage involved.
+
+## 6. User Interface Layout Plan
+
+### Dashboard
+*   List of Campaigns available to the user based on their role.
+*   "Start Session" button for DMs.
+
+### Campaign View (Main Workspace)
+*   **Left Sidebar:** Character Sheet & Inventory (Hidden for Spectators). *DM can access other players' sheets via a separate tab or menu.*
+*   **Center Panel:** Chat Stream.
+    *   **Color Coding:**
+        *   White/Gray: Standard Public Message.
+        *   Dark Purple: DM Whisper (Visible only to DM/Sender).
+        *   Blue Border: Split Party Message (If user is in that group).
+        *   Spectator Label: Distinct visual marker for spectator posts.
+    *   **Filter Tabs:** Story / Game / All.
+*   **Right Sidebar:** Campaign Tools.
+    *   **DM Controls:** "Start/End Split Mode", "Manage Groups" (Dynamic), "View Party Sheets".
+    *   **Dice Roller:** Quick roll buttons (20-sided die, 6-sided die, etc.). As well as complex rolls such as with modifiers, multiple dice rolls and advantage/disadvantage.
+
+### DM Review Interface
+*   A dedicated view to process chat tags.
+*   Highlights unmarked messages in Yellow.
+*   Keyboard shortcuts active here for rapid tagging.
+
+## 7. Security & Privacy Considerations (Adjusted)
+*   **Trusted Environment:** Since all users are trusted and on a local network, encryption is not required.
+*   **Access Control:** The system ensures players cannot access data for other campaigns or delete messages they do not own (unless DM). Spectators are restricted from viewing private character stats or DM whispers.
+*   **File Safety:** File extensions will be checked to ensure only images are uploaded to prevent malicious file execution, though deep scanning is not required per requirements.
+
+## 8. Development Roadmap (Simplified)
+
+### Phase 1: Core Setup & Auth
+*   Initialize Django project with SQLite database.
+*   Create Virtual Environment setup script.
+*   Implement User Login and Campaign Membership (including Spectator role).
+*   Basic Character Sheet creation.
+
+### Phase 2: Chat & Visibility
+*   Build Chat Model (Public, DM_Only, Split_Group).
+*   Implement Background Updates for chat refreshes.
+*   Add Color Coding logic for DM-only messages.
+*   Implement "Send to DM" functionality and Spectator tagging.
+*   Update display logic to show Character Name for In-Character messages.
+
+### Phase 3: Split Party & Dice
+*   Build `PartyGroup` model with dynamic editing capabilities.
+*   Filter Chat Stream based on active `PartyGroup`.
+*   Implement Dice Roller with "Hide from Players" toggle.
+*   Add logic for revealing hidden rolls to DM only.
+
+### Phase 4: Character Management & Moderation
+*   Build the **Dungeon Master** view to access all player character sheets.
+*   Create the First-Time User Tutorial/Example flow for character creation.
+*   Build the Keyboard Navigation interface for tagging messages.
+*   Implement Edit/Delete permissions for DMs.
+
+### Phase 5: Export & Polish
+*   Create the compressed archive export script (Media + Database dump).
+*   Final User Interface Polish and Testing on Local Network.
+
+## 9. Specific UX Decisions Confirmed
+1.  **Default Tag:** Out-of-Character messages default to "Relevant".
+2.  **Edit Indicator:** Edited messages show "(Edited)".
+3.  **Dice Privacy:** Option to hide rolls from players (DM sees all).
+4.  **Split Party Reveal:** DM chooses whether split chats become public upon rejoining.
+5.  **Spectator Access:** Spectators can view chat and post Out-of-Character comments, marked clearly as "Spectator". They cannot see private stats or whispers.
+6.  **Chat Naming:** In-Character messages display the Character Name; Out-of-Character messages display the User's Real Name.
+7.  **DM Sheet Access:** The **Dungeon Master** can view all character sheets in their campaign at any time.
+8.  **Tutorial:** New users are guided through character creation with examples on first setup.
+9.  **Dynamic Groups:** Split Party groups can be modified by the DM during an active session without data loss.
+
+## 10. Deployment Instructions (High Level)
+1.  **Install Python** on the host machine (if not present).
+2.  **Create Folder:** `tabletop_app`.
+3.  **Setup Environment:** Create a local virtual environment and activate it.
+4.  **Install Dependencies:** Install required packages locally within the project folder.
+5.  **Run Server:** Start the server on a specific port accessible via the network (e.g., Port 8000).
+6.  **Access:** Other users on the Local Area Network access via `http://<HOST_IP>:8000`.
+
+This plan ensures you meet all functional requirements while strictly adhering to the technical limitations of your hosting environment. It prioritizes stability and ease of setup over complex infrastructure, with clear definitions for all technical terms used.

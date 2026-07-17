@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}All Campaigns - Admin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="{% url 'campaigns:admin_user_list' %}" class="btn btn-secondary" style="margin-bottom: 1rem;">← Back to User Management</a>
+    
+    <h1>All Campaigns</h1>
+    <p style="color: #aaa; margin-top: 0.5rem;">System Administrator - Campaign Overview</p>
+</div>
+
+{% if campaign_data %}
+<div class="card">
+    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+        <thead>
+            <tr style="border-bottom: 2px solid #0f3460;">
+                <th style="text-align: left; padding: 0.75rem;">Campaign</th>
+                <th style="text-align: left; padding: 0.75rem;">DM</th>
+                <th style="text-align: center; padding: 0.75rem;">Members</th>
+                <th style="text-align: center; padding: 0.75rem;">Status</th>
+                <th style="text-align: center; padding: 0.75rem;">Created</th>
+                <th style="text-align: center; padding: 0.75rem;">Last Message</th>
+                <th style="text-align: center; padding: 0.75rem;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in campaign_data %}
+            {% with campaign=item.campaign dm_user=item.dm_user %}
+            <tr style="border-bottom: 1px solid #0f3460;">
+                <td style="padding: 0.75rem; color: #eee;">
+                    {{ campaign.title }}
+                    {% if campaign.description %}
+                    <br><small style="color: #666;">{{ campaign.description|truncatewords:10 }}</small>
+                    {% endif %}
+                </td>
+                <td style="padding: 0.75rem; color: #aaa;">
+                    {{ dm_user.real_name|default:dm_user.username|default:"No DM" }}
+                </td>
+                <td style="padding: 0.75rem; text-align: center;">
+                    {{ item.member_count }}
+                </td>
+                <td style="padding: 0.75rem; text-align: center;">
+                    {% if campaign.is_active %}
+                        <span class="role-badge" style="background-color: #27ae60; color: white;">Active</span>
+                    {% else %}
+                        <span class="role-badge" style="background-color: #e74c3c; color: white;">Inactive</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 0.75rem; text-align: center; color: #888;">
+                    {{ campaign.created_at|date:"M d, Y" }}
+                </td>
+                <td style="padding: 0.75rem; text-align: center; color: #888;">
+                    {% if campaign.last_message_date %}
+                        {{ campaign.last_message_date|date:"M d, H:i" }}
+                    {% else %}
+                        <span style="color: #666;">-</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 0.75rem; text-align: center;">
+                    <a href="{% url 'campaigns:campaign_detail' campaign.pk %}" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">View</a>
+                    <a href="{% url 'campaigns:delete_campaign' campaign.pk %}?next=campaigns:admin_campaign_list" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.4rem 0.8rem; background-color: #c73e54;">Delete</a>
+                </td>
+            </tr>
+            {% endwith %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card" style="text-align: center; padding: 3rem;">
+    <h2 style="color: #e94560;">No Campaigns Found</h2>
+    <p style="margin: 1rem 0; color: #aaa;">There are no campaigns in the system yet.</p>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top: 2rem;">
+    <h3 style="color: #9b5de5;">Admin Actions</h3>
+    <ul style="list-style: none; line-height: 2.5;">
+        <li>✅ View all campaigns and their details</li>
+        <li>✅ Delete any campaign if needed</li>
+        <li>✅ Access campaign detail page to manage members (as admin)</li>
+        <li>✅ Monitor campaign activity and membership</li>
+    </ul>
+</div>
+{% endblock %}

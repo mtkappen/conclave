@@ -1,0 +1,60 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Create User - Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 3rem auto;">
+    <div class="card">
+        <h2 style="color: #e94560; margin-bottom: 1.5rem;">👤 Create New User Account</h2>
+        
+        <p style="margin-bottom: 1.5rem; color: #aaa;">
+            Only the system administrator can create user accounts. Users will be given a temporary password and must change it on first login.
+        </p>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div style="margin-bottom: 1rem;">
+                <label for="{{ form.username.id_for_label }}">Username *</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <small style="color: #e94560; display: block; margin-top: 0.25rem;">{{ form.username.errors|join:", " }}</small>
+                {% endif %}
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <label for="{{ form.real_name.id_for_label }}">Full Name *</label>
+                {{ form.real_name }}
+                {% if form.real_name.errors %}
+                    <small style="color: #e94560; display: block; margin-top: 0.25rem;">{{ form.real_name.errors|join:", " }}</small>
+                {% endif %}
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <label for="{{ form.default_password.id_for_label }}">Default Password *</label>
+                {{ form.default_password }}
+                <small style="color: #888; display: block; margin-top: 0.25rem;">
+                    This is the temporary password. Share it securely with the user. They must change it on first login.
+                </small>
+                {% if form.default_password.errors %}
+                    <small style="color: #e94560; display: block; margin-top: 0.25rem;">{{ form.default_password.errors|join:", " }}</small>
+                {% endif %}
+            </div>
+            
+            <button type="submit" class="btn" style="width: 100%;">Create User Account</button>
+        </form>
+        
+        <p style="text-align: center; margin-top: 1.5rem;">
+            <a href="{% url 'campaigns:admin_user_list' %}" style="color: #e94560;">← Back to User List</a>
+        </p>
+    </div>
+    
+    <div class="card" style="margin-top: 2rem; font-size: 0.9rem; color: #aaa;">
+        <strong>Important Notes:</strong><br>
+        • The user will be required to change this password on their first login<br>
+        • Share the temporary password securely with the user<br>
+        • You can assign campaign roles after creating the account
+    </div>
+</div>
+{% endblock %}
