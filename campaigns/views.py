@@ -677,17 +677,27 @@ def get_chat_messages(request, campaign_pk):
 @require_POST
 def post_chat_message(request, campaign_pk):
     """Post a new chat message."""
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
-    
-    data = json.loads(request.body)
-    content = data.get('content', '').strip()
-    visibility_type = data.get('visibility_type', 'PUBLIC')
-    message_type = data.get('message_type', 'OOC_RELEVANT')
-    recipient_user_ids = data.get('recipient_user_ids', [])  # Now accepts multiple recipients
-    
-    if not content:
-        return JsonResponse({'error': 'Message content is required'}, status=400)
+    try:
+        campaign = get_object_or_404(Campaign, pk=campaign_pk)
+        membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+        
+        # Parse JSON body with error handling
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError as e:
+            return JsonResponse({'error': f'Invalid JSON format: {str(e)}'}, status=400)
+        
+        content = data.get('content', '').strip()
+        visibility_type = data.get('visibility_type', 'PUBLIC')
+        message_type = data.get('message_type', 'OOC_RELEVANT')
+        recipient_user_ids = data.get('recipient_user_ids', [])  # Now accepts multiple recipients
+        
+        if not content:
+            return JsonResponse({'error': 'Message content is required'}, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)
     
     # Handle whispers (DM_ONLY or SECRET_WHISPER) with multiple recipients
     dm_recipient = None
@@ -760,25 +770,30 @@ def post_chat_message(request, campaign_pk):
         if group_id:
             party_group = get_object_or_404(PartyGroup, pk=group_id, campaign=campaign)
     
-    # Create message
-    message = ChatMessage.objects.create(
-        content=content,
-        sender=request.user,
-        campaign=campaign,
-        visibility_type=visibility_type,
-        party_group=party_group,
-        message_type=message_type,
-        recipient=dm_recipient,  # For backwards compatibility
-    )
-    
-    # Add recipients for SECRET_WHISPER
-    if secret_recipients:
-        message.recipients.set(secret_recipients)
-    
-    return JsonResponse({
-        'success': True,
-        'message_id': message.id,
-    })
+    try:
+        # Create message
+        message = ChatMessage.objects.create(
+            content=content,
+            sender=request.user,
+            campaign=campaign,
+            visibility_type=visibility_type,
+            party_group=party_group,
+            message_type=message_type,
+            recipient=dm_recipient,  # For backwards compatibility
+        )
+        
+        # Add recipients for SECRET_WHISPER (must be done after message is saved)
+        if secret_recipients:
+            message.recipients.set(secret_recipients)
+        
+        return JsonResponse({
+            'success': True,
+            'message_id': message.id,
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'Failed to create message: {str(e)}'}, status=500)
 
 
 @login_required
