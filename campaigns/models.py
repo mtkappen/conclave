@@ -156,7 +156,8 @@ class ChatMessage(models.Model):
     """Chat messages with visibility controls."""
     VISIBILITY_CHOICES = [
         ('PUBLIC', 'Public'),
-        ('DM_ONLY', 'DM Only'),
+        ('DM_ONLY', 'DM Only - DM and sender only'),
+        ('SECRET_WHISPER', 'Secret Whisper - Selected recipients only (excludes DM)'),
         ('SPLIT_GROUP', 'Split Group'),
     ]
 
@@ -179,8 +180,8 @@ class ChatMessage(models.Model):
     is_edited = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
-    # For DM whispers: track the specific recipient (player/spectator the DM whispered to)
-    recipient = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='received_whispers')
+    # For whispers: track specific recipients (many-to-many for multiple recipients)
+    recipients = models.ManyToManyField(User, blank=True, related_name='received_whispers', help_text="Specific recipients for whisper messages")
     
     # Store sender's name at time of creation for archival purposes
     sender_username = models.CharField(max_length=150, blank=True, help_text="Username at time of posting (preserved after user deletion)")

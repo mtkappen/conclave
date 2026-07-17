@@ -52,4 +52,7 @@ urlpatterns = [
     path('membership/<int:membership_pk>/role/', views.update_member_role, name='update_role'),
     path('membership/<int:membership_pk>/remove/', views.remove_campaign_member, name='remove_member'),
     path('campaign/<int:campaign_pk>/leave/', views.leave_campaign, name='leave_campaign'),
+    
+    # Admin secret whisper viewer
+    path('admin/campaign/<int:campaign_pk>/secrets/', views.admin_view_secret_whispers, name='admin_view_secrets'),
 ]

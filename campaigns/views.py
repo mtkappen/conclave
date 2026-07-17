@@ -572,21 +572,24 @@ def get_chat_messages(request, campaign_pk):
     visible_messages = ChatMessage.objects.filter(campaign=campaign)
     
     # Filter based on visibility type and user role
-    if membership.role == 'DM':
-        # DMs see everything
+    if membership.role == 'DM' or request.user.is_superuser:
+        # DMs and admins see everything
         visible_messages = visible_messages.order_by('created_at')
     else:
         # Players and Spectators have restrictions
         # They can see:
         # 1. PUBLIC messages
-        # 2. Their own DM_ONLY messages (whispers to DM)
+        # 2. Their own DM_ONLY or SECRET_WHISPER messages (whispers they sent)
         # 3. DM whispers TO them (DM_ONLY messages where they are the recipient)
-        # 4. SPLIT_GROUP messages for their group
-        # 5. Their own messages regardless of visibility
+        # 4. SECRET_WHISPER messages where they are a recipient
+        # 5. SPLIT_GROUP messages for their group
+        # 6. Their own messages regardless of visibility
         visible_messages = visible_messages.filter(
             Q(visibility_type='PUBLIC') |
             Q(visibility_type='DM_ONLY', sender=request.user) |  # Can see their own DM whispers
-            Q(visibility_type='DM_ONLY', recipient=request.user) |  # Can see DM whispers to them
+            Q(visibility_type='DM_ONLY', recipient=request.user) |  # Can see DM whispers to them (old single-recipient system)
+            Q(visibility_type='SECRET_WHISPER', sender=request.user) |  # Can see their own secret whispers
+            Q(visibility_type='SECRET_WHISPER', recipients=request.user) |  # Can see secret whispers sent to them
             Q(visibility_type='SPLIT_GROUP', party_group=user_group) |  # Can see their group's messages
             Q(sender=request.user)  # Always see their own messages
         )
@@ -597,6 +600,8 @@ def get_chat_messages(request, campaign_pk):
                 Q(visibility_type='PUBLIC') |
                 Q(visibility_type='DM_ONLY', sender=request.user) |  # Their own whispers to DM
                 Q(visibility_type='DM_ONLY', recipient=request.user) |  # DM whispers to them
+                Q(visibility_type='SECRET_WHISPER', sender=request.user) |  # Their own secret whispers
+                Q(visibility_type='SECRET_WHISPER', recipients=request.user) |  # Secret whispers to them
                 Q(visibility_type='SPLIT_GROUP', party_group=user_group) |
                 Q(sender=request.user)
             )
@@ -624,8 +629,12 @@ def get_chat_messages(request, campaign_pk):
             except Character.DoesNotExist:
                 pass
         
-        # Check if this is a DM whisper to the current user
-        is_dm_whisper_to_me = (msg.visibility_type == 'DM_ONLY' and msg.recipient == request.user)
+        # Check if this is a whisper to the current user (DM_ONLY or SECRET_WHISPER)
+        is_dm_whisper_to_me = False
+        if msg.visibility_type == 'DM_ONLY':
+            is_dm_whisper_to_me = (msg.recipient == request.user)
+        elif msg.visibility_type == 'SECRET_WHISPER':
+            is_dm_whisper_to_me = msg.recipients.filter(id=request.user.id).exists()
         
         message_list.append({
             'id': msg.id,
@@ -675,39 +684,66 @@ def post_chat_message(request, campaign_pk):
     content = data.get('content', '').strip()
     visibility_type = data.get('visibility_type', 'PUBLIC')
     message_type = data.get('message_type', 'OOC_RELEVANT')
-    recipient_user_id = data.get('recipient_user_id')
+    recipient_user_ids = data.get('recipient_user_ids', [])  # Now accepts multiple recipients
     
     if not content:
         return JsonResponse({'error': 'Message content is required'}, status=400)
     
-    # Handle DM whispers to specific players/spectators
+    # Handle whispers (DM_ONLY or SECRET_WHISPER) with multiple recipients
     dm_recipient = None
-    if membership.role == 'DM' and data.get('visibility_type') in ['PLAYER_WHISPER', 'SPECTATOR_WHISPER']:
-        if not recipient_user_id:
-            return JsonResponse({'error': 'Recipient is required for whispers'}, status=400)
+    secret_recipients = []
+    
+    if visibility_type == 'DM_ONLY':
+        # DM_ONLY: Only sender and DM can see (old behavior for players sending to DM)
+        # No specific recipient needed, just mark as DM_ONLY
+        pass
+    
+    elif visibility_type == 'SECRET_WHISPER':
+        # SECRET_WHISPER: Selected recipients only (excludes DM unless they're selected)
+        if not recipient_user_ids or len(recipient_user_ids) == 0:
+            return JsonResponse({'error': 'At least one recipient is required for whispers'}, status=400)
         
-        recipient = get_object_or_404(User, pk=recipient_user_id)
-        recipient_membership = CampaignMembership.objects.filter(user=recipient, campaign=campaign).first()
-        
-        if not recipient_membership:
-            return JsonResponse({'error': 'Recipient is not a member of this campaign'}, status=400)
-        
-        # Validate recipient type matches whisper type
-        if data.get('visibility_type') == 'PLAYER_WHISPER' and recipient_membership.role != 'PLAYER':
-            return JsonResponse({'error': 'Selected recipient is not a player'}, status=400)
-        if data.get('visibility_type') == 'SPECTATOR_WHISPER' and recipient_membership.role != 'SPECTATOR':
-            return JsonResponse({'error': 'Selected recipient is not a spectator'}, status=400)
-        
-        # Store as DM_ONLY with recipient tracked
-        visibility_type = 'DM_ONLY'
-        dm_recipient = recipient
+        # Validate all recipients are campaign members
+        for user_id in recipient_user_ids:
+            try:
+                user_id_int = int(user_id)
+                recipient = User.objects.get(pk=user_id_int)
+                recipient_membership = CampaignMembership.objects.filter(user=recipient, campaign=campaign).first()
+                
+                if not recipient_membership:
+                    return JsonResponse({'error': f'Recipient {user_id} is not a member of this campaign'}, status=400)
+                
+                secret_recipients.append(recipient)
+            except (ValueError, User.DoesNotExist):
+                return JsonResponse({'error': f'Invalid recipient ID: {user_id}'}, status=400)
+    
+    # Handle old single-recipient format for backwards compatibility
+    if not secret_recipients and 'recipient_user_id' in data and data['recipient_user_id']:
+        try:
+            recipient = User.objects.get(pk=data['recipient_user_id'])
+            recipient_membership = CampaignMembership.objects.filter(user=recipient, campaign=campaign).first()
+            
+            if not recipient_membership:
+                return JsonResponse({'error': 'Recipient is not a member of this campaign'}, status=400)
+            
+            # For backwards compatibility, treat single-recipient DM whispers as DM_ONLY
+            if visibility_type in ['PLAYER_WHISPER', 'SPECTATOR_WHISPER']:
+                visibility_type = 'DM_ONLY'
+                dm_recipient = recipient
+        except (ValueError, User.DoesNotExist):
+            pass
     
     # Validate visibility based on role
     if membership.role == 'SPECTATOR':
         # Spectators can only post PUBLIC OOC messages
         visibility_type = 'PUBLIC'
         message_type = 'OOC_RELEVANT'
-    elif membership.role != 'DM' and visibility_type not in ['PUBLIC', 'DM_ONLY']:
+    elif membership.role != 'DM' and membership.role != 'PLAYER':
+        return JsonResponse({'error': 'Invalid role'}, status=400)
+    
+    # Players can send PUBLIC, DM_ONLY (to DM), or SECRET_WHISPER
+    # DMs can send everything
+    if visibility_type not in ['PUBLIC', 'DM_ONLY', 'SECRET_WHISPER', 'SPLIT_GROUP']:
         return JsonResponse({'error': 'Invalid visibility type'}, status=400)
     
     # Check if user has a character for IC messages
@@ -732,8 +768,12 @@ def post_chat_message(request, campaign_pk):
         visibility_type=visibility_type,
         party_group=party_group,
         message_type=message_type,
-        recipient=dm_recipient,
+        recipient=dm_recipient,  # For backwards compatibility
     )
+    
+    # Add recipients for SECRET_WHISPER
+    if secret_recipients:
+        message.recipients.set(secret_recipients)
     
     return JsonResponse({
         'success': True,
@@ -995,3 +1035,33 @@ def leave_campaign(request, campaign_pk):
     # Note: messages.success is not used here as this is an AJAX endpoint
     # Success feedback is handled via the JSON response
     return JsonResponse({'success': True})
+
+
+@login_required
+def admin_view_secret_whispers(request, campaign_pk):
+    """Admin-only view to see all secret whispers in a campaign (override privacy)."""
+    if not request.user.is_superuser:
+        messages.error(request, 'Only system administrators can access this feature.')
+        return redirect('campaigns:dashboard')
+    
+    campaign = get_object_or_404(Campaign, pk=campaign_pk)
+    
+    # Get all secret whispers in the campaign
+    secret_messages = ChatMessage.objects.filter(
+        campaign=campaign,
+        visibility_type='SECRET_WHISPER'
+    ).select_related('sender', 'campaign').prefetch_related('recipients').order_by('-created_at')
+    
+    # Also get DM_ONLY messages for completeness
+    dm_only_messages = ChatMessage.objects.filter(
+        campaign=campaign,
+        visibility_type='DM_ONLY'
+    ).select_related('sender', 'recipient', 'campaign').order_by('-created_at')
+    
+    context = {
+        'campaign': campaign,
+        'secret_messages': secret_messages,
+        'dm_only_messages': dm_only_messages,
+    }
+    
+    return render(request, 'campaigns/admin_view_secrets.html', context)

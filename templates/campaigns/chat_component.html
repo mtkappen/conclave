@@ -1,10 +1,13 @@
 {% load static %}
 <!-- Chat Component for Campaign Detail -->
 <div class="chat-container" id="chatContainer">
-    <!-- Chat Header -->
+        <!-- Chat Header -->
     <div class="chat-header">
         <h3 style="color: #007acc; margin: 0;">💬 Campaign Chat</h3>
         <div class="chat-controls">
+            {% if request.user.is_superuser %}
+            <a href="{% url 'campaigns:admin_view_secrets' campaign.pk %}" class="btn btn-secondary" style="margin-right: 0.5rem;">🔐 View Secrets</a>
+            {% endif %}
             <button class="btn btn-secondary" id="refreshBtn" onclick="loadChatMessages()">🔄 Refresh</button>
             <span id="lastUpdate" style="color: #858585; font-size: 0.85rem; margin-left: 1rem;"></span>
         </div>
@@ -58,29 +61,26 @@
                 {% endif %}
             </select>
             
-            <select id="visibilityType" class="form-control" style="width: auto; margin-bottom: 0;" onchange="toggleRecipientSelect()">
+                        <select id="visibilityType" class="form-control" style="width: auto; margin-bottom: 0;" onchange="toggleRecipientSelect()">
                 <option value="PUBLIC">👥 Public</option>
                 {% if membership.role == 'PLAYER' %}
                 <option value="DM_ONLY">🔒 Send to DM Only</option>
+                <option value="SECRET_WHISPER">🤫 Secret Whisper (Select Recipients)</option>
                 {% endif %}
-                {% if membership.role == 'DM' %}
-                <option value="PLAYER_WHISPER">💬 Whisper to Player</option>
-                <option value="SPECTATOR_WHISPER">💬 Whisper to Spectator</option>
+                {% if membership.role == 'DM' or request.user.is_superuser %}
+                <option value="SECRET_WHISPER">🤫 Secret Whisper (Select Recipients)</option>
                 {% endif %}
             </select>
             
-            <!-- Recipient selector (only for DM whispers) -->
-            <select id="recipientSelect" class="form-control" style="width: auto; margin-bottom: 0; display: none;">
-                {% if membership.role == 'DM' %}
+            <!-- Multi-select recipient selector (only for whispers) -->
+            <div id="recipientContainer" style="display: none; margin-bottom: 0.5rem;">
+                <select id="recipientSelect" class="form-control" multiple style="width: 100%; max-height: 120px;">
                     {% for mem in all_memberships %}
-                        {% if mem.role == 'PLAYER' %}
-                            <option value="player_{{ mem.user.pk }}">{{ mem.user.real_name|default:mem.user.username }} (Player)</option>
-                        {% elif mem.role == 'SPECTATOR' %}
-                            <option value="spectator_{{ mem.user.pk }}">{{ mem.user.real_name|default:mem.user.username }} (Spectator)</option>
-                        {% endif %}
+                        <option value="{{ mem.user.pk }}">{{ mem.user.real_name|default:mem.user.username }} ({{ mem.get_role_display }})</option>
                     {% endfor %}
-                {% endif %}
-            </select>
+                </select>
+                <small style="color: #858585; font-size: 0.75rem;">Hold Ctrl (Cmd on Mac) to select multiple recipients</small>
+            </div>
         </div>
         
         <!-- Editor Toolbar -->
@@ -892,12 +892,12 @@ function switchTab(tab) {
 
 function toggleRecipientSelect() {
     const visibilityType = document.getElementById('visibilityType').value;
-    const recipientSelect = document.getElementById('recipientSelect');
+    const recipientContainer = document.getElementById('recipientContainer');
     
-    if (visibilityType === 'PLAYER_WHISPER' || visibilityType === 'SPECTATOR_WHISPER') {
-        recipientSelect.style.display = 'inline-block';
+    if (visibilityType === 'SECRET_WHISPER') {
+        recipientContainer.style.display = 'block';
     } else {
-        recipientSelect.style.display = 'none';
+        recipientContainer.style.display = 'none';
     }
 }
 
@@ -915,19 +915,19 @@ async function sendMessage() {
         return;
     }
     
-    // For DM whispers, ensure recipient is selected
-    let recipientUserId = null;
-    if (visibilityType === 'PLAYER_WHISPER' || visibilityType === 'SPECTATOR_WHISPER') {
+    // For SECRET_WHISPER, ensure at least one recipient is selected
+    let recipientUserIds = [];
+    if (visibilityType === 'SECRET_WHISPER') {
         const recipientSelect = document.getElementById('recipientSelect');
-        const selectedValue = recipientSelect.value;
+        const selectedOptions = Array.from(recipientSelect.selectedOptions);
         
-        if (!selectedValue) {
-            alert('Please select a recipient.');
+        if (selectedOptions.length === 0) {
+            alert('Please select at least one recipient.');
             return;
         }
         
-        // Extract user ID from value (e.g., "player_123" -> 123)
-        recipientUserId = parseInt(selectedValue.split('_')[1]);
+        // Extract all user IDs from selected options
+        recipientUserIds = selectedOptions.map(option => option.value);
     }
     
     try {
@@ -941,7 +941,7 @@ async function sendMessage() {
                 content: content,  // Send HTML content
                 message_type: messageType,
                 visibility_type: visibilityType,
-                recipient_user_id: recipientUserId
+                recipient_user_ids: recipientUserIds  // Send array of recipient IDs
             })
         });
         
@@ -949,6 +949,11 @@ async function sendMessage() {
         
         if (data.success) {
             editor.innerHTML = '';  // Clear the editor
+            // Deselect all recipients after sending
+            const recipientSelect = document.getElementById('recipientSelect');
+            for (let i = 0; i < recipientSelect.options.length; i++) {
+                recipientSelect.options[i].selected = false;
+            }
             loadChatMessages();
         } else {
             alert('Error: ' + data.error);
