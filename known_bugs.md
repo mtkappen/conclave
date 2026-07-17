@@ -12,6 +12,12 @@
 
 ---
 
+## Secret Message Recipient Display
+
+- [ ] **Show recipient in secret messages** - When viewing DM-only whispers or split-group messages, the recipient(s) should be displayed in *italics* next to the sender's name (e.g., "SenderName (*to: Player1, Player2*)"). Currently, this information is missing from the chat interface.
+
+---
+
 ## Dashboard Campaign Text Color
 
 - ✅ **Fixed**: Changed campaign title and "No Campaigns Yet" heading from red (#e94560) to white (#fff) on dashboard
