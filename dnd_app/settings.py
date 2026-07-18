@@ -139,4 +139,19 @@ CHAT_REFRESH_INTERVAL = 3000
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+# =============================================================================
+# TESTING CONFIGURATION
+# =============================================================================
+
+# Use in-memory database for faster tests when running pytest
+import sys
+if 'pytest' in sys.modules or 'runtests' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+
+
 
