@@ -1224,10 +1224,10 @@ def edit_campaign_rule_book(request, campaign_pk):
     campaign = get_object_or_404(Campaign, pk=campaign_pk)
     membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
     
-    # Only DMs can edit the rule book
+        # Only DMs can edit the rule book
     if membership.role != 'DM':
         messages.error(request, 'Only the Dungeon Master can edit the campaign rule book.')
-        return redirect('campaigns:view_rule_book', pk=campaign_pk)
+        return redirect('campaigns:view_rule_book', campaign_pk=campaign_pk)
     
     # Get or create the rule book for this campaign
     rule_book, created = CampaignRuleBook.objects.get_or_create(campaign=campaign)
@@ -1236,10 +1236,10 @@ def edit_campaign_rule_book(request, campaign_pk):
         title = request.POST.get('title', '').strip()
         content = request.POST.get('content', '')
         
-        if not title:
+                if not title:
             messages.error(request, 'Rule book title is required.')
         else:
-                        rule_book.title = title
+            rule_book.title = title
             rule_book.content = content
             rule_book.save()
             messages.success(request, 'Campaign rule book has been updated!')
