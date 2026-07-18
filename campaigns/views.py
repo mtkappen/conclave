@@ -37,27 +37,6 @@ def first_time_admin_setup(request):
     return render(request, 'registration/first_time_setup.html', {'form': form})
 
 
-def register(request):
-    """User registration view."""
-    # Prevent regular registration if no admin exists
-    if not User.objects.exists():
-        return redirect('campaigns:first_time_setup')
-    
-    if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            messages.success(
-                request, 
-                f'Account created successfully for {user.username}! Please log in.'
-            )
-            return redirect('campaigns:login')
-    else:
-        form = UserRegistrationForm()
-    
-    return render(request, 'registration/register.html', {'form': form})
-
-
 def custom_login(request):
     """Custom login view with password change enforcement."""
     # Redirect to first-time setup if no users exist
