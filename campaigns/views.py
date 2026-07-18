@@ -19,14 +19,15 @@ def first_time_admin_setup(request):
     if User.objects.exists():
         return redirect('campaigns:login')
     
-    if request.method == 'POST':
+        if request.method == 'POST':
         form = FirstTimeAdminSetupForm(request.POST)
         if form.is_valid():
-            # Create the first user as superuser
+            # Create the first user as superuser (email set to empty string since not used)
             user = User.objects.create_superuser(
                 username=form.cleaned_data['username'],
                 real_name=form.cleaned_data['real_name'],
-                password=form.cleaned_data['password1']
+                password=form.cleaned_data['password1'],
+                email=''  # Email field required by Django but not used in this app
             )
             
             messages.success(request, 'Welcome! Your administrator account has been created.')
