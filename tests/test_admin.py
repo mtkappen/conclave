@@ -4,7 +4,10 @@ Tests user management, campaign administration, and database operations.
 """
 import pytest
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 from campaigns.models import Campaign
+
+User = get_user_model()
 
 
 class TestUserManagement:

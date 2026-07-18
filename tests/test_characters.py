@@ -4,7 +4,10 @@ Tests character creation, editing, deletion, and inventory management.
 """
 import pytest
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 from campaigns.models import Character, InventoryItem
+
+User = get_user_model()
 
 
 class TestCharacterCreation:

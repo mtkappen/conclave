@@ -381,8 +381,9 @@ def campaign_detail(request, pk):
             is_temporary = True  # Flag to indicate this is admin viewing mode
         membership = TempMembership()
     
-    # If admin override is requested and user is superuser, set the flag
-    # This allows admins to see ALL messages even if they are members
+    # IMPORTANT: Only set admin override if explicitly requested via URL parameter
+    # If admin is a regular member of the campaign, they should see normal visibility
+    # This fixes the bug where admins could see all secrets in normal campaign mode
     if is_admin_override:
         is_admin_viewing = True
         # Set session flag so AJAX calls know this is an admin override view
@@ -666,7 +667,8 @@ def get_chat_messages(request, campaign_pk):
                 is_temporary = True  # Flag to indicate this is admin viewing mode
             membership = TempMembership()
         
-        # If admin override is active, allow seeing all messages
+                # If admin override is active (explicitly set via URL parameter), allow seeing all messages
+        # Otherwise, admins who are members should only see what their role allows
         if is_admin_override:
             is_admin_viewing = True
 
@@ -967,11 +969,22 @@ def post_dice_roll(request, campaign_pk):
 
 
 @login_required
+@require_POST
 def edit_chat_message(request, message_pk):
     """Edit a chat message (DMs/Admins can edit any, users can edit their own)."""
     message = get_object_or_404(ChatMessage, pk=message_pk)
     campaign = message.campaign
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+    
+    # Handle admin viewing mode (admin without membership but with access)
+    if not membership and request.user.is_superuser:
+        class TempMembership:
+            role = 'DM'
+        membership = TempMembership()
+    
+    # Check permissions
+    if membership.role != 'DM' and message.sender != request.user:
+        return JsonResponse({'error': 'You do not have permission to edit this message'}, status=403)
     
     # Check permissions
     if membership.role != 'DM' and message.sender != request.user:
@@ -999,7 +1012,13 @@ def delete_chat_message(request, message_pk):
     """Delete a chat message (DMs/Admins can delete any, users can delete their own)."""
     message = get_object_or_404(ChatMessage, pk=message_pk)
     campaign = message.campaign
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+    
+    # Handle admin viewing mode (admin without membership but with access)
+    if not membership and request.user.is_superuser:
+        class TempMembership:
+            role = 'DM'
+        membership = TempMembership()
     
     # Check permissions
     if membership.role != 'DM' and message.sender != request.user:

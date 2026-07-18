@@ -5,7 +5,10 @@ Tests real-time messaging, message editing/deletion, and dice rolls.
 import pytest
 import json
 from django.urls import reverse
-from campaigns.models import ChatMessage
+from django.contrib.auth import get_user_model
+from campaigns.models import ChatMessage, Campaign
+
+User = get_user_model()
 
 
 class TestChatMessages:
