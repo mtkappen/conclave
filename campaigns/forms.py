@@ -206,3 +206,47 @@ class DiceRollForm(forms.Form):
     ], initial=20)
     modifier = forms.IntegerField(initial=0)
     is_hidden = forms.BooleanField(required=False, help_text="Hide from players (DM only)")
+
+
+class FirstTimeAdminSetupForm(forms.Form):
+    """Form for first-time admin to set up their account."""
+    username = forms.CharField(
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Choose a username'})
+    )
+    real_name = forms.CharField(
+        max_length=100, 
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Your full name'})
+    )
+    password1 = forms.CharField(
+        label='Password',
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Choose a strong password'}),
+        help_text='Must be at least 8 characters long.'
+    )
+    password2 = forms.CharField(
+        label='Confirm Password',
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm your password'})
+    )
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get('password1')
+        password2 = self.cleaned_data.get('password2')
+        
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError("Passwords do not match.")
+        
+        if password1 and len(password1) < 8:
+            raise forms.ValidationError("Password must be at least 8 characters long.")
+        
+        return password2
+
+
+class DatabaseResetForm(forms.Form):
+    """Form for confirming database reset."""
+    confirm = forms.BooleanField(
+        required=True,
+        label='I understand this will permanently delete ALL data',
+        help_text='This action cannot be undone. All campaigns, users, characters, messages, and other data will be deleted.'
+    )

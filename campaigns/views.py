@@ -10,11 +10,39 @@ import json
 import re
 
 from .models import User, Campaign, CampaignMembership, Character, InventoryItem, ChatMessage, DiceRollLog, PartyGroup, PartyGroupMember, PersonalNotebook, CampaignRuleBook
-from .forms import AdminUserCreationForm, CustomAuthenticationForm, CampaignForm, CharacterForm, InventoryItemForm, PasswordChangeForm, UserRegistrationForm, UserPasswordChangeForm
+from .forms import AdminUserCreationForm, CustomAuthenticationForm, CampaignForm, CharacterForm, InventoryItemForm, PasswordChangeForm, UserRegistrationForm, UserPasswordChangeForm, FirstTimeAdminSetupForm, DatabaseResetForm
+
+
+def first_time_admin_setup(request):
+    """View for first-time admin to set up their account."""
+    # Check if any users exist - if so, redirect to login
+    if User.objects.exists():
+        return redirect('campaigns:login')
+    
+    if request.method == 'POST':
+        form = FirstTimeAdminSetupForm(request.POST)
+        if form.is_valid():
+            # Create the first user as superuser
+            user = User.objects.create_superuser(
+                username=form.cleaned_data['username'],
+                real_name=form.cleaned_data['real_name'],
+                password=form.cleaned_data['password1']
+            )
+            
+            messages.success(request, 'Welcome! Your administrator account has been created.')
+            return redirect('campaigns:dashboard')
+    else:
+        form = FirstTimeAdminSetupForm()
+    
+    return render(request, 'registration/first_time_setup.html', {'form': form})
 
 
 def register(request):
     """User registration view."""
+    # Prevent regular registration if no admin exists
+    if not User.objects.exists():
+        return redirect('campaigns:first_time_setup')
+    
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
@@ -32,6 +60,10 @@ def register(request):
 
 def custom_login(request):
     """Custom login view with password change enforcement."""
+    # Redirect to first-time setup if no users exist
+    if not User.objects.exists():
+        return redirect('campaigns:first_time_setup')
+    
     if request.method == 'POST':
         form = CustomAuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -208,6 +240,60 @@ def delete_user(request, pk):
     }
     
     return render(request, 'registration/admin_delete_user.html', context)
+
+
+@login_required
+def database_reset(request):
+    """View for admin to completely reset the database."""
+    if not request.user.is_superuser:
+        messages.error(request, 'Only the system administrator can reset the database.')
+        return redirect('campaigns:dashboard')
+    
+    if request.method == 'POST':
+        form = DatabaseResetForm(request.POST)
+        if form.is_valid():
+            # Delete all data in proper order to avoid foreign key issues
+            
+            # 1. Delete related data first (chat messages, dice rolls, etc.)
+            ChatMessage.objects.all().delete()
+            DiceRollLog.objects.all().delete()
+            PersonalNotebook.objects.all().delete()
+            CampaignRuleBook.objects.all().delete()
+            
+            # 2. Delete campaign memberships and characters
+            CampaignMembership.objects.all().delete()
+            Character.objects.all().delete()
+            InventoryItem.objects.all().delete()
+            PartyGroupMember.objects.all().delete()
+            PartyGroup.objects.all().delete()
+            
+            # 3. Delete campaigns
+            Campaign.objects.all().delete()
+            
+            # 4. Delete all users EXCEPT the current admin
+            users_to_delete = User.objects.exclude(id=request.user.id)
+            users_to_delete.delete()
+            
+            messages.success(request, 'Database has been reset. All data except your admin account has been deleted.')
+            return redirect('campaigns:dashboard')
+    else:
+        form = DatabaseResetForm()
+    
+    # Count current data
+    user_count = User.objects.count()
+    campaign_count = Campaign.objects.count()
+    character_count = Character.objects.count()
+    message_count = ChatMessage.objects.count()
+    
+    context = {
+        'form': form,
+        'user_count': user_count,
+        'campaign_count': campaign_count,
+        'character_count': character_count,
+        'message_count': message_count,
+    }
+    
+    return render(request, 'registration/database_reset.html', context)
 
 
 @login_required

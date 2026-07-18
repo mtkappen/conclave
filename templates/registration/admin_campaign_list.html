@@ -83,4 +83,17 @@
         <li>✅ Monitor campaign activity and membership</li>
     </ul>
 </div>
+
+<div class="card" style="margin-top: 1.5rem; border-left: 4px solid #e94560;">
+    <h3 style="color: #e94560; margin-top: 0;">⚠️ Destructive Actions</h3>
+    <p style="color: #aaa; margin-bottom: 1rem;">Use with extreme caution - these actions cannot be undone.</p>
+    
+    <a href="{% url 'campaigns:database_reset' %}" class="btn" style="background-color: #e94560; color: white; display: inline-block; padding: 0.75rem 1.5rem;">
+        🗑️ Reset Entire Database
+    </a>
+    
+    <p style="color: #888; font-size: 0.85rem; margin-top: 0.75rem;">
+        This will delete all campaigns, users (except you), characters, messages, and all other data.
+    </p>
+</div>
 {% endblock %}

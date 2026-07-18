@@ -80,6 +80,19 @@
                 </div>
         </div>
         
+        <div class="card" style="margin-top: 1.5rem; border-left: 4px solid #e94560;">
+            <h3 style="color: #e94560; margin-top: 0;">⚠️ Destructive Actions</h3>
+            
+                <a href="{% url 'campaigns:database_reset' %}" 
+                   class="btn" 
+                   style="width: 100%; display: block; text-align: center; background-color: #e94560; color: white;">
+                    🗑️ Reset Entire Database
+                </a>
+            
+                <p style="color: #888; font-size: 0.85rem; margin-top: 0.75rem;">
+                    Deletes all data except your admin account. Cannot be undone.
+                </p>
+        </div>
 
     </div>
 </div>

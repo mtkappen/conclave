@@ -4,12 +4,18 @@ from . import views
 app_name = 'campaigns'
 
 urlpatterns = [
+    # First-time admin setup (must come before login/register)
+    path('setup/', views.first_time_admin_setup, name='first_time_setup'),
+    
     # Authentication
     path('register/', views.register, name='register'),
     path('login/', views.custom_login, name='login'),
     path('logout/', views.custom_logout, name='logout'),
     path('change-password/', views.change_password, name='change_password'),
     path('voluntary-change-password/', views.voluntary_change_password, name='voluntary_change_password'),
+    
+    # Database reset (admin only)
+    path('admin/database-reset/', views.database_reset, name='database_reset'),
     
     # User Management (Super Admin only) - accessible at /users/
     path('users/', views.admin_user_list, name='admin_user_list'),

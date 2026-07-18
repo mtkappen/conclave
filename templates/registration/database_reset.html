@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Database Reset - Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; margin: 2.5rem auto;">
+    <div class="card" style="padding: 2rem;">
+        <h1 style="color: #e94560; margin-bottom: 1rem;">⚠️ Database Reset</h1>
+        
+        <p style="margin-bottom: 1.5rem; color: #aaa;">
+            This action will completely wipe all data from the database, returning the system to its initial state (as if it had never been run).
+        </p>
+        
+        {% if user_count > 0 or campaign_count > 0 %}
+        <div style="background-color: rgba(233, 69, 96, 0.1); border: 1px solid #e94560; padding: 1rem; margin-bottom: 1.5rem; border-radius: 4px;">
+            <h3 style="margin-top: 0; color: #e94560;">Current Database Contents:</h3>
+            <ul style="list-style: none; padding-left: 0; line-height: 2;">
+                {% if user_count > 0 %}
+                <li>👥 <strong>{{ user_count }} user(s)</strong> (your admin account will be preserved)</li>
+                {% endif %}
+                {% if campaign_count > 0 %}
+                <li>📜 <strong>{{ campaign_count }} campaign(s)</strong></li>
+                {% endif %}
+                {% if character_count > 0 %}
+                <li>⚔️ <strong>{{ character_count }} character(s)</strong></li>
+                {% endif %}
+                {% if message_count > 0 %}
+                <li>💬 <strong>{{ message_count }} chat message(s)</strong></li>
+                {% endif %}
+            </ul>
+        </div>
+        {% else %}
+        <div style="background-color: rgba(155, 93, 229, 0.1); border-left: 4px solid #9b5de5; padding: 1rem; margin-bottom: 1.5rem;">
+            The database is already empty. There's nothing to reset.
+        </div>
+        {% endif %}
+        
+        <form method="post" style="margin-top: 2rem;">
+            {% csrf_token %}
+            
+            <div style="background-color: rgba(233, 69, 96, 0.15); border: 2px solid #e94560; padding: 1.5rem; margin-bottom: 1.5rem; border-radius: 4px;">
+                <label style="display: flex; align-items: start; cursor: pointer;">
+                    {{ form.confirm }}
+                    <span style="margin-left: 0.75rem; color: #e94560; font-weight: bold;">
+                        I understand this will permanently delete ALL data and cannot be undone
+                    </span>
+                </label>
+                
+                {% if form.confirm.errors %}
+                <div class="alert alert-error" style="margin-top: 0.75rem;">{{ form.confirm.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <p style="color: #888; font-size: 0.9rem; margin-bottom: 1.5rem;">
+                This will delete:<br>
+                • All campaigns and their rule books<br>
+                • All users (except your admin account)<br>
+                • All characters, inventory items, and party groups<br>
+                • All chat messages and dice rolls<br>
+                • All personal notebooks and campaign memberships
+            </p>
+            
+            <div style="display: flex; gap: 1rem;">
+                <a href="{% url 'campaigns:admin_campaign_list' %}" class="btn btn-secondary" style="flex: 1; text-align: center;">Cancel</a>
+                <button type="submit" class="btn" style="flex: 1; background-color: #e94560; color: white;" {% if not user_count and not campaign_count %}disabled{% endif %}>
+                    Reset Database
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="card" style="margin-top: 1.5rem; padding: 1.25rem;">
+        <h3 style="color: #9b5de5; margin-top: 0;">Alternative Options</h3>
+        <p style="color: #aaa; margin-bottom: 1rem;">If you only want to remove specific data, consider:</p>
+        <ul style="list-style: none; line-height: 2.5;">
+            <li><a href="{% url 'campaigns:admin_campaign_list' %}" style="color: #e94560;">Delete individual campaigns</a></li>
+            <li><a href="{% url 'campaigns:admin_user_list' %}" style="color: #e94560;">Remove specific users</a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
