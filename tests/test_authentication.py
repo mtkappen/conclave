@@ -5,6 +5,7 @@ Tests login, logout, password change, and permission-based access.
 import pytest
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from campaigns.models import Campaign
 
 User = get_user_model()
 
