@@ -244,7 +244,7 @@ def delete_user(request, pk):
 
 @login_required
 def database_reset(request):
-    """View for admin to completely reset the database."""
+    """View for admin to completely reset the database (including all users)."""
     if not request.user.is_superuser:
         messages.error(request, 'Only the system administrator can reset the database.')
         return redirect('campaigns:dashboard')
@@ -270,12 +270,14 @@ def database_reset(request):
             # 3. Delete campaigns
             Campaign.objects.all().delete()
             
-            # 4. Delete all users EXCEPT the current admin
-            users_to_delete = User.objects.exclude(id=request.user.id)
-            users_to_delete.delete()
+            # 4. Delete ALL users including the current admin
+            User.objects.all().delete()
             
-            messages.success(request, 'Database has been reset. All data except your admin account has been deleted.')
-            return redirect('campaigns:dashboard')
+            # Log out the current user (their account no longer exists)
+            logout(request)
+            
+            messages.success(request, 'Database has been completely reset. All accounts and data have been deleted.')
+            return redirect('campaigns:first_time_setup')
     else:
         form = DatabaseResetForm()
     
