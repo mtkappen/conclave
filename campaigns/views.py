@@ -15,7 +15,7 @@ from .forms import AdminUserCreationForm, CustomAuthenticationForm, CampaignForm
 
 def first_time_admin_setup(request):
     """View for first-time admin to set up their account."""
-        # Check if any users exist - if so, redirect to login
+    # Check if any users exist - if so, redirect to login
     if User.objects.exists():
         return redirect('campaigns:login')
     
@@ -475,7 +475,7 @@ def edit_character(request, pk):
         messages.error(request, 'You do not have access to this campaign.')
         return redirect('campaigns:dashboard')
     
-        # DMs can edit all characters, players only their own
+    # DMs can edit all characters, players only their own
     if membership and membership.role != 'DM' and character.user != request.user:
         messages.error(request, 'You do not have permission to edit this character.')
         return redirect('campaigns:character_detail', pk=pk)
@@ -509,7 +509,7 @@ def character_detail(request, pk):
         messages.error(request, 'You do not have access to this campaign.')
         return redirect('campaigns:dashboard')
     
-        # DMs can view all characters, players only their own
+    # DMs can view all characters, players only their own
     if membership and membership.role != 'DM' and character.user != request.user:
         messages.error(request, 'You do not have permission to view this character.')
         return redirect('campaigns:campaign_detail', pk=character.campaign.pk)
@@ -534,7 +534,7 @@ def add_inventory_item(request, character_pk):
         messages.error(request, 'You do not have access to this campaign.')
         return redirect('campaigns:dashboard')
     
-                if membership and membership.role != 'DM' and character.user != request.user:
+    if membership and membership.role != 'DM' and character.user != request.user:
         messages.error(request, 'You do not have permission to edit this character.')
         return redirect('campaigns:character_detail', pk=character_pk)
     
@@ -562,7 +562,7 @@ def dm_character_roster(request, campaign_pk):
     campaign = get_object_or_404(Campaign, pk=campaign_pk)
     membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
     
-        # Only DMs can access this
+    # Only DMs can access this
     if membership and membership.role != 'DM':
         messages.error(request, 'Only Dungeon Masters can view the full roster.')
         return redirect('campaigns:campaign_detail', pk=campaign_pk)
@@ -618,7 +618,7 @@ def delete_character(request, pk):
     character = get_object_or_404(Character, pk=pk)
     membership = get_object_or_404(CampaignMembership, user=request.user, campaign=character.campaign)
     
-        # Only DM or the character owner can delete
+    # Only DM or the character owner can delete
     if membership and membership.role != 'DM' and character.user != request.user:
         messages.error(request, 'You do not have permission to delete this character.')
         return redirect('campaigns:character_detail', pk=pk)
@@ -648,14 +648,14 @@ def get_chat_messages(request, campaign_pk):
         # Track if this is an admin viewing without being a member
         is_admin_viewing = False
         
-        # Check for admin override mode (accessed from /admin/campaigns/ with ?admin_override=1)
+                # Check for admin override mode (accessed from /admin/campaigns/ with ?admin_override=1)
         # Note: We need to check the query params from the referring page, but since this is AJAX
         # we'll rely on session or a different approach. For now, we'll pass it via a header or
         # store it in session when the page loads.
         # Actually, let's check if the user explicitly set admin_override in their session
         is_admin_override = request.session.get('admin_campaign_view', False) and request.user.is_superuser
         
-                # If no membership and not a superuser, deny access
+        # If no membership and not a superuser, deny access
         if not membership and not request.user.is_superuser:
             return JsonResponse({'error': 'You do not have access to this campaign.'}, status=403)
         
@@ -857,14 +857,14 @@ def post_chat_message(request, campaign_pk):
             if not recipient_membership:
                 return JsonResponse({'error': 'Recipient is not a member of this campaign'}, status=400)
             
-            # For backwards compatibility, treat single-recipient DM whispers as DM_ONLY
+                        # For backwards compatibility, treat single-recipient DM whispers as DM_ONLY
             if visibility_type in ['PLAYER_WHISPER', 'SPECTATOR_WHISPER']:
                 visibility_type = 'DM_ONLY'
                 dm_recipient = recipient
         except (ValueError, User.DoesNotExist):
             pass
     
-            # Validate visibility based on role
+    # Validate visibility based on role
     # Note: membership should never be None here due to get_object_or_404 above
     if membership and membership.role == 'SPECTATOR':
         # Spectators can only post PUBLIC OOC messages
