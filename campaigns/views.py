@@ -10,7 +10,7 @@ import json
 import re
 
 from .models import User, Campaign, CampaignMembership, Character, InventoryItem, ChatMessage, DiceRollLog, PartyGroup, PartyGroupMember, PersonalNotebook, CampaignRuleBook
-from .forms import AdminUserCreationForm, CustomAuthenticationForm, CampaignForm, CharacterForm, InventoryItemForm, PasswordChangeForm, UserRegistrationForm, UserPasswordChangeForm, FirstTimeAdminSetupForm, DatabaseResetForm
+from .forms import AdminUserCreationForm, CustomAuthenticationForm, CampaignForm, CharacterForm, InventoryItemForm, PasswordChangeForm, UserPasswordChangeForm, FirstTimeAdminSetupForm, DatabaseResetForm
 
 
 def first_time_admin_setup(request):

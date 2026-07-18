@@ -7,8 +7,7 @@ urlpatterns = [
     # First-time admin setup (must come before login/register)
     path('setup/', views.first_time_admin_setup, name='first_time_setup'),
     
-    # Authentication
-    path('register/', views.register, name='register'),
+        # Authentication
     path('login/', views.custom_login, name='login'),
     path('logout/', views.custom_logout, name='logout'),
     path('change-password/', views.change_password, name='change_password'),
