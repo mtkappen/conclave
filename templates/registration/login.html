@@ -1,18 +1,11 @@
 {% extends 'base.html' %}
 
-{% block title %}Sign In - D&D Campaign Manager{% endblock %}
+{% block title %}Sign In - TaskFlow{% endblock %}
 
 {% block content %}
 <div style="max-width: 420px; margin: 2.5rem auto;">
     <div class="card">
-        <h2 style="text-align: center; margin-bottom: 1.25rem; font-size: 1.6rem;">D&D Campaign Manager</h2>
-        
-        {% if not user.is_authenticated %}
-        <div style="background-color: rgba(155, 93, 229, 0.1); border-left: 4px solid #9b5de5; padding: 1rem; margin-bottom: 1.25rem;">
-            <strong>First Time?</strong><br>
-            If no accounts exist yet, you'll be redirected to create the administrator account.
-        </div>
-        {% endif %}
+        <h2 style="text-align: center; margin-bottom: 1.25rem; font-size: 1.6rem;">TaskFlow Sign In</h2>
         
         <form method="post">
             {% csrf_token %}
@@ -38,7 +31,7 @@
     </div>
     
     <div class="card" style="margin-top: 1.5rem; font-size: 0.9rem; color: #aaa; padding: 1.25rem;">
-        <strong>D&D Campaign Manager:</strong> A comprehensive tool for managing tabletop RPG campaigns, characters, and player communication.
+        <strong>TaskFlow:</strong> A simple task management tool for teams and individuals to organize work and boost productivity.
     </div>
 </div>
 {% endblock %}

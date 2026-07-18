@@ -284,11 +284,7 @@
                 <button type="button" class="user-menu-toggle" id="userMenuToggle">
                     {{ user.real_name|default:user.username }} ▼
                 </button>
-                <div class="user-dropdown" id="userDropdown">
-                    {% if user.is_superuser %}
-                    <a href="{% url 'campaigns:database_reset' %}">🗑️ Database Reset</a>
-                    <div class="divider"></div>
-                    {% endif %}
+                                <div class="user-dropdown" id="userDropdown">
                     <a href="{% url 'campaigns:voluntary_change_password' %}">🔐 Change Password</a>
                     <div class="divider"></div>
                     <a href="{% url 'campaigns:logout' %}">🚪 Logout</a>
