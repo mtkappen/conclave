@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ rule_book.title }} - {{ campaign.title }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="{% url 'campaigns:campaign_detail' campaign.pk %}" class="btn btn-secondary" style="margin-bottom: 1rem;">← Back to Campaign</a>
+    
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div>
+            <h1>{{ rule_book.title }}</h1>
+            {% if campaign.description %}
+            <p style="color: #aaa; margin-top: 0.5rem;">{{ campaign.description }}</p>
+            {% endif %}
+        </div>
+        
+        {% if is_admin_viewing %}
+        <span class="role-badge" style="background-color: #9b5de5; color: white;">
+            System Administrator (View Only)
+        </span>
+        {% else %}
+        <span class="role-badge role-{{ membership.role|lower }}">
+            Your Role: {{ membership.get_role_display }}
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Rule Book Content -->
+<div class="card" style="margin-bottom: 2rem;">
+    {% if is_editing %}
+        <!-- Edit Mode -->
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label for="title" style="display: block; color: #007acc; margin-bottom: 0.5rem; font-weight: bold;">
+                    Title:
+                </label>
+                <input type="text" 
+                       id="title" 
+                       name="title" 
+                       value="{{ rule_book.title }}"
+                       style="width: 100%; padding: 0.75rem; background-color: #2d2d30; border: 1px solid #3c3c3c; color: white; border-radius: 4px; font-size: 1rem;">
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label for="content" style="display: block; color: #007acc; margin-bottom: 0.5rem; font-weight: bold;">
+                    Content:
+                </label>
+                <textarea id="content" 
+                          name="content" 
+                          rows="20"
+                          style="width: 100%; padding: 0.75rem; background-color: #2d2d30; border: 1px solid #3c3c3c; color: white; border-radius: 4px; font-size: 1rem; font-family: monospace;">{{ rule_book.content }}</textarea>
+                <p style="color: #808080; font-size: 0.85rem; margin-top: 0.5rem;">
+                    You can use markdown formatting in the content.
+                </p>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn" style="background-color: #4caf50;">
+                    💾 Save Rule Book
+                </button>
+                <a href="{% url 'campaigns:view_rule_book' campaign.pk %}" class="btn btn-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    {% else %}
+        <!-- View Mode -->
+        <div style="padding: 1rem;">
+            {% if rule_book.content %}
+                <div style="color: #d4d4d4; line-height: 1.8; white-space: pre-wrap;">{{ rule_book.content }}</div>
+            {% else %}
+                <p style="color: #aaa;">The rule book is currently empty.</p>
+                {% if can_edit %}
+                    <a href="{% url 'campaigns:edit_rule_book' campaign.pk %}" class="btn" style="margin-top: 1rem;">
+                        ✏️ Create Rule Book
+                    </a>
+                {% endif %}
+            {% endif %}
+        </div>
+        
+        <!-- Action Buttons -->
+        <div style="padding: 1rem; border-top: 1px solid #3c3c3c; margin-top: 1rem;">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                {% if can_edit %}
+                    <a href="{% url 'campaigns:edit_rule_book' campaign.pk %}" class="btn">
+                        ✏️ Edit Rule Book
+                    </a>
+                {% endif %}
+                
+                <span style="color: #808080; font-size: 0.85rem;">
+                    Last updated: {{ rule_book.updated_at|date:"M d, Y H:i" }}
+                </span>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Additional Info -->
+<div class="card">
+    <h3 style="color: #007acc; margin-top: 0;">ℹ️ About the Rule Book</h3>
+    <p style="color: #d4d4d4;">
+        The campaign rule book contains house rules, campaign-specific guidelines, and reference materials 
+        for this adventure. All campaign members can view the rule book, but only the Dungeon Master can 
+        edit it.
+    </p>
+    
+    {% if not is_editing %}
+        <div style="margin-top: 1rem; padding: 1rem; background-color: #2d2d30; border-radius: 4px;">
+            <h4 style="color: #9b5de5; margin-top: 0;">Quick Links</h4>
+            <ul style="color: #d4d4d4; line-height: 1.8;">
+                <li><a href="{% url 'campaigns:campaign_detail' campaign.pk %}" style="color: #3794ff; text-decoration: none;">← Back to Campaign Dashboard</a></li>
+                {% if can_edit %}
+                    <li><a href="{% url 'campaigns:dm_roster' campaign.pk %}" style="color: #3794ff; text-decoration: none;">📋 View Character Roster</a></li>
+                    <li><a href="{% url 'campaigns:manage_members' campaign.pk %}" style="color: #3794ff; text-decoration: none;">👥 Manage Members</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

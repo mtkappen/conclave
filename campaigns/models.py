@@ -270,3 +270,15 @@ class PersonalNotebook(models.Model):
     
     def __str__(self):
         return f"{self.title} ({self.user.username} - {self.campaign.title})"
+
+
+class CampaignRuleBook(models.Model):
+    """Campaign rule book - visible to all members, editable only by DM."""
+    campaign = models.OneToOneField(Campaign, on_delete=models.CASCADE, related_name='rule_book')
+    title = models.CharField(max_length=200, default="Campaign Rule Book")
+    content = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Rule Book for {self.campaign.title}"

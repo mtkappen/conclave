@@ -56,7 +56,11 @@ urlpatterns = [
     # Admin secret whisper viewer
     path('admin/campaign/<int:campaign_pk>/secrets/', views.admin_view_secret_whispers, name='admin_view_secrets'),
     
-    # Personal Notebook
+        # Personal Notebook
     path('campaign/<int:campaign_pk>/notebook/', views.my_personal_notebook, name='personal_notebook'),
     path('notebook/<int:pk>/delete/', views.delete_personal_notebook, name='delete_personal_notebook'),
+    
+    # Campaign Rule Book
+    path('campaign/<int:campaign_pk>/rule-book/', views.view_campaign_rule_book, name='view_rule_book'),
+    path('campaign/<int:campaign_pk>/rule-book/edit/', views.edit_campaign_rule_book, name='edit_rule_book'),
 ]

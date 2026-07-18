@@ -195,13 +195,29 @@
     </div>
     {% endif %}
     
-    <!-- Rule Book Placeholder (Coming Soon) -->
-    <div class="card" style="margin-bottom: 1.5rem; opacity: 0.6;">
+        <!-- Campaign Rule Book -->
+    <div class="card" style="margin-bottom: 1.5rem;">
         <h3 style="color: #e94560; margin-top: 0;">📖 Campaign Rule Book</h3>
-        <p style="color: #aaa;">
-            The campaign rule book will be available here soon. This space is reserved for house rules, 
-            campaign-specific guidelines, and reference materials.
-        </p>
+        {% if campaign.rule_book and campaign.rule_book.content %}
+            <p style="color: #d4d4d4;">
+                Access the campaign rule book containing house rules, guidelines, and reference materials.
+            </p>
+            <a href="{% url 'campaigns:view_rule_book' campaign.pk %}" class="btn" style="display: inline-block;">
+                📖 View Rule Book
+            </a>
+            {% if membership.role == 'DM' and not is_admin_viewing %}
+                <a href="{% url 'campaigns:edit_rule_book' campaign.pk %}" class="btn btn-secondary" style="display: inline-block; margin-left: 0.5rem;">
+                    ✏️ Edit Rule Book
+                </a>
+            {% endif %}
+        {% else %}
+            <p style="color: #aaa;">
+                The campaign rule book hasn't been created yet. 
+                {% if membership.role == 'DM' and not is_admin_viewing %}
+                    <a href="{% url 'campaigns:edit_rule_book' campaign.pk %}" style="color: #3794ff;">Create it now</a>
+                {% endif %}
+            </p>
+        {% endif %}
     </div>
     
     <!-- Additional sections can be added here in the future -->
