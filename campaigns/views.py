@@ -15,11 +15,11 @@ from .forms import AdminUserCreationForm, CustomAuthenticationForm, CampaignForm
 
 def first_time_admin_setup(request):
     """View for first-time admin to set up their account."""
-    # Check if any users exist - if so, redirect to login
+        # Check if any users exist - if so, redirect to login
     if User.objects.exists():
         return redirect('campaigns:login')
     
-        if request.method == 'POST':
+    if request.method == 'POST':
         form = FirstTimeAdminSetupForm(request.POST)
         if form.is_valid():
             # Create the first user as superuser (email set to empty string since not used)
