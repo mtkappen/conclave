@@ -182,10 +182,29 @@
 <div style="margin-top: 2rem;">
     <h2 style="color: #007acc; margin-bottom: 1rem;">📚 Campaign Resources</h2>
     
-    <!-- Additional sections can be added here in the future -->
-    <div class="card">
-        <p style="color: #aaa;">Additional campaign resources and documentation will appear here.</p>
+    <!-- Personal Notebook Section -->
+    {% if membership and not is_admin_viewing %}
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 style="color: #9b5de5; margin-top: 0;">📔 Your Personal Notebook</h3>
+        <p style="color: #d4d4d4;">
+            Keep track of your character's thoughts, secrets, and campaign notes in your private notebook.
+        </p>
+        <a href="{% url 'campaigns:personal_notebook' campaign.pk %}" class="btn" style="display: inline-block;">
+            📖 Open My Notebook
+        </a>
     </div>
+    {% endif %}
+    
+    <!-- Rule Book Placeholder (Coming Soon) -->
+    <div class="card" style="margin-bottom: 1.5rem; opacity: 0.6;">
+        <h3 style="color: #e94560; margin-top: 0;">📖 Campaign Rule Book</h3>
+        <p style="color: #aaa;">
+            The campaign rule book will be available here soon. This space is reserved for house rules, 
+            campaign-specific guidelines, and reference materials.
+        </p>
+    </div>
+    
+    <!-- Additional sections can be added here in the future -->
 </div>
 
 <script>

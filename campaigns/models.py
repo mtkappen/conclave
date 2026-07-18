@@ -253,3 +253,20 @@ class DiceRollLog(models.Model):
             self.sender_real_name = self.sender.real_name or ''
         
         super().save(*args, **kwargs)
+
+
+class PersonalNotebook(models.Model):
+    """Personal notebook for a user in a campaign - only visible to the owner."""
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    
+    title = models.CharField(max_length=200)
+    content = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('user', 'campaign')  # One notebook per user per campaign
+    
+    def __str__(self):
+        return f"{self.title} ({self.user.username} - {self.campaign.title})"

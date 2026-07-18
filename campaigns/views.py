@@ -9,7 +9,7 @@ from django.utils.html import escape
 import json
 import re
 
-from .models import User, Campaign, CampaignMembership, Character, InventoryItem, ChatMessage, DiceRollLog, PartyGroup, PartyGroupMember
+from .models import User, Campaign, CampaignMembership, Character, InventoryItem, ChatMessage, DiceRollLog, PartyGroup, PartyGroupMember, PersonalNotebook
 from .forms import AdminUserCreationForm, CustomAuthenticationForm, CampaignForm, CharacterForm, InventoryItemForm, PasswordChangeForm, UserRegistrationForm, UserPasswordChangeForm
 
 
@@ -1130,3 +1130,65 @@ def admin_view_secret_whispers(request, campaign_pk):
     }
     
     return render(request, 'campaigns/admin_view_secrets.html', context)
+
+
+@login_required
+def my_personal_notebook(request, campaign_pk):
+    """View and edit personal notebook for a specific campaign. Only visible to the owner."""
+    campaign = get_object_or_404(Campaign, pk=campaign_pk)
+    
+    # Check if user is a member of this campaign
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+    if not membership:
+        messages.error(request, 'You do not have access to this campaign.')
+        return redirect('campaigns:dashboard')
+    
+    # Get or create the user's personal notebook for this campaign
+    notebook, created = PersonalNotebook.objects.get_or_create(
+        user=request.user,
+        campaign=campaign,
+        defaults={'title': 'My Notes', 'content': ''}
+    )
+    
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        content = request.POST.get('content', '')
+        
+        if not title:
+            messages.error(request, 'Notebook title is required.')
+        else:
+            notebook.title = title
+            notebook.content = content
+            notebook.save()
+            messages.success(request, 'Your notes have been saved!')
+    
+    context = {
+        'campaign': campaign,
+        'membership': membership,
+        'notebook': notebook,
+    }
+    
+    return render(request, 'campaigns/personal_notebook.html', context)
+
+
+@login_required
+def delete_personal_notebook(request, pk):
+    """Delete a personal notebook (only the owner can delete)."""
+    notebook = get_object_or_404(PersonalNotebook, pk=pk)
+    
+    # Only the owner can delete their own notebook
+    if notebook.user != request.user:
+        messages.error(request, 'You do not have permission to delete this notebook.')
+        return redirect('campaigns:dashboard')
+    
+    campaign_pk = notebook.campaign.pk
+    
+    if request.method == 'POST':
+        notebook.delete()
+        messages.success(request, 'Your personal notebook has been deleted.')
+        return redirect('campaigns:campaign_detail', pk=campaign_pk)
+    
+    return render(request, 'campaigns/confirm_delete.html', {
+        'object': notebook,
+        'object_type': 'personal notebook',
+    })

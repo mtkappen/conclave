@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ notebook.title }} - Personal Notebook{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <a href="{% url 'campaigns:campaign_detail' campaign.pk %}" class="btn btn-secondary" style="margin-bottom: 1rem;">← Back to Campaign</a>
+    
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+        <h1>📔 Personal Notebook</h1>
+        <span class="role-badge role-{{ membership.role|lower }}">
+            {{ membership.get_role_display }}
+        </span>
+    </div>
+    
+    <p style="color: #aaa; margin-top: 0.5rem;">
+        This is your private notebook for the campaign "{{ campaign.title }}". Only you can view and edit these notes.
+    </p>
+</div>
+
+<div class="card">
+    <form method="post" action="{% url 'campaigns:personal_notebook' campaign.pk %}">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 1rem;">
+            <label for="title" style="display: block; margin-bottom: 0.5rem; color: #007acc; font-weight: bold;">
+                Notebook Title
+            </label>
+            <input type="text" 
+                   id="title" 
+                   name="title" 
+                   value="{{ notebook.title }}" 
+                   maxlength="200"
+                   style="width: 100%; padding: 0.75rem; background-color: #2d2d30; border: 1px solid #3c3c3c; color: white; border-radius: 4px; font-size: 1rem;"
+                   required>
+        </div>
+        
+        <div style="margin-bottom: 1.5rem;">
+            <label for="content" style="display: block; margin-bottom: 0.5rem; color: #007acc; font-weight: bold;">
+                Notes
+            </label>
+            <textarea id="content" 
+                      name="content" 
+                      rows="20"
+                      style="width: 100%; padding: 0.75rem; background-color: #2d2d30; border: 1px solid #3c3c3c; color: white; border-radius: 4px; font-size: 1rem; font-family: monospace; resize: vertical;"
+                      placeholder="Write your notes here...">{{ notebook.content }}</textarea>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <button type="submit" class="btn" style="background-color: #4caf50;">
+                💾 Save Notes
+            </button>
+            
+            {% if notebook.pk %}
+            <a href="{% url 'campaigns:delete_personal_notebook' notebook.pk %}" 
+               class="btn btn-secondary" 
+               style="background-color: #e94560; color: white;">
+                🗑️ Delete Notebook
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<div style="margin-top: 2rem; padding: 1rem; background-color: #2d2d30; border-radius: 4px; border-left: 4px solid #9b5de5;">
+    <h4 style="color: #9b5de5; margin-top: 0;">ℹ️ Privacy Notice</h4>
+    <p style="color: #d4d4d4; margin-bottom: 0;">
+        Your personal notebook is completely private. Only you can see and edit these notes. 
+        The Dungeon Master and other campaign members cannot access your notebook.
+    </p>
+</div>
+{% endblock %}
