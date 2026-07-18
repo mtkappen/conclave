@@ -475,8 +475,8 @@ def edit_character(request, pk):
         messages.error(request, 'You do not have access to this campaign.')
         return redirect('campaigns:dashboard')
     
-    # DMs can edit all characters, players only their own
-    if membership.role != 'DM' and character.user != request.user:
+        # DMs can edit all characters, players only their own
+    if membership and membership.role != 'DM' and character.user != request.user:
         messages.error(request, 'You do not have permission to edit this character.')
         return redirect('campaigns:character_detail', pk=pk)
     
@@ -509,8 +509,8 @@ def character_detail(request, pk):
         messages.error(request, 'You do not have access to this campaign.')
         return redirect('campaigns:dashboard')
     
-    # DMs can view all characters, players only their own
-    if membership.role != 'DM' and character.user != request.user:
+        # DMs can view all characters, players only their own
+    if membership and membership.role != 'DM' and character.user != request.user:
         messages.error(request, 'You do not have permission to view this character.')
         return redirect('campaigns:campaign_detail', pk=character.campaign.pk)
     
@@ -534,7 +534,7 @@ def add_inventory_item(request, character_pk):
         messages.error(request, 'You do not have access to this campaign.')
         return redirect('campaigns:dashboard')
     
-    if membership.role != 'DM' and character.user != request.user:
+                if membership and membership.role != 'DM' and character.user != request.user:
         messages.error(request, 'You do not have permission to edit this character.')
         return redirect('campaigns:character_detail', pk=character_pk)
     
@@ -562,8 +562,8 @@ def dm_character_roster(request, campaign_pk):
     campaign = get_object_or_404(Campaign, pk=campaign_pk)
     membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
     
-    # Only DMs can access this
-    if membership.role != 'DM':
+        # Only DMs can access this
+    if membership and membership.role != 'DM':
         messages.error(request, 'Only Dungeon Masters can view the full roster.')
         return redirect('campaigns:campaign_detail', pk=campaign_pk)
     
@@ -618,8 +618,8 @@ def delete_character(request, pk):
     character = get_object_or_404(Character, pk=pk)
     membership = get_object_or_404(CampaignMembership, user=request.user, campaign=character.campaign)
     
-    # Only DM or the character owner can delete
-    if membership.role != 'DM' and character.user != request.user:
+        # Only DM or the character owner can delete
+    if membership and membership.role != 'DM' and character.user != request.user:
         messages.error(request, 'You do not have permission to delete this character.')
         return redirect('campaigns:character_detail', pk=pk)
     
@@ -655,7 +655,7 @@ def get_chat_messages(request, campaign_pk):
         # Actually, let's check if the user explicitly set admin_override in their session
         is_admin_override = request.session.get('admin_campaign_view', False) and request.user.is_superuser
         
-        # If no membership and not a superuser, deny access
+                # If no membership and not a superuser, deny access
         if not membership and not request.user.is_superuser:
             return JsonResponse({'error': 'You do not have access to this campaign.'}, status=403)
         
@@ -667,7 +667,7 @@ def get_chat_messages(request, campaign_pk):
                 is_temporary = True  # Flag to indicate this is admin viewing mode
             membership = TempMembership()
         
-                # If admin override is active (explicitly set via URL parameter), allow seeing all messages
+        # If admin override is active (explicitly set via URL parameter), allow seeing all messages
         # Otherwise, admins who are members should only see what their role allows
         if is_admin_override:
             is_admin_viewing = True
@@ -864,12 +864,13 @@ def post_chat_message(request, campaign_pk):
         except (ValueError, User.DoesNotExist):
             pass
     
-    # Validate visibility based on role
-    if membership.role == 'SPECTATOR':
+            # Validate visibility based on role
+    # Note: membership should never be None here due to get_object_or_404 above
+    if membership and membership.role == 'SPECTATOR':
         # Spectators can only post PUBLIC OOC messages
         visibility_type = 'PUBLIC'
         message_type = 'OOC_RELEVANT'
-    elif membership.role != 'DM' and membership.role != 'PLAYER':
+    elif membership and membership.role != 'DM' and membership.role != 'PLAYER':
         return JsonResponse({'error': 'Invalid role'}, status=400)
     
     # Players can send PUBLIC, DM_ONLY (to DM), or SECRET_WHISPER
@@ -877,15 +878,15 @@ def post_chat_message(request, campaign_pk):
     if visibility_type not in ['PUBLIC', 'DM_ONLY', 'SECRET_WHISPER', 'SPLIT_GROUP']:
         return JsonResponse({'error': 'Invalid visibility type'}, status=400)
     
-    # Check if user has a character for IC messages
-    if message_type == 'IC' and membership.role == 'PLAYER':
+        # Check if user has a character for IC messages
+    if message_type == 'IC' and membership and membership.role == 'PLAYER':
         if not Character.objects.filter(user=request.user, campaign=campaign).exists():
             return JsonResponse({'error': 'You need a character to send In-Character messages'}, status=400)
     
     # Handle split group visibility
     party_group = None
     if visibility_type == 'SPLIT_GROUP':
-        if membership.role != 'DM':
+        if membership and membership.role != 'DM':
             return JsonResponse({'error': 'Only DMs can send split-group messages'}, status=400)
         group_id = data.get('party_group_id')
         if group_id:
@@ -932,8 +933,8 @@ def post_dice_roll(request, campaign_pk):
     if not formula or result is None:
         return JsonResponse({'error': 'Formula and result are required'}, status=400)
     
-    # Validate visibility
-    if membership.role != 'DM' and visibility == 'DM_ONLY':
+        # Validate visibility
+    if membership and membership.role != 'DM' and visibility == 'DM_ONLY':
         # Players can hide rolls from other players (DM sees all)
         pass  # Allow it
     
@@ -982,12 +983,8 @@ def edit_chat_message(request, message_pk):
             role = 'DM'
         membership = TempMembership()
     
-    # Check permissions
-    if membership.role != 'DM' and message.sender != request.user:
-        return JsonResponse({'error': 'You do not have permission to edit this message'}, status=403)
-    
-    # Check permissions
-    if membership.role != 'DM' and message.sender != request.user:
+            # Check permissions
+    if membership and membership.role != 'DM' and message.sender != request.user:
         return JsonResponse({'error': 'You do not have permission to edit this message'}, status=403)
     
     data = json.loads(request.body)
@@ -1020,8 +1017,8 @@ def delete_chat_message(request, message_pk):
             role = 'DM'
         membership = TempMembership()
     
-    # Check permissions
-    if membership.role != 'DM' and message.sender != request.user:
+            # Check permissions
+    if membership and membership.role != 'DM' and message.sender != request.user:
         return JsonResponse({'error': 'You do not have permission to delete this message'}, status=403)
     
     message.delete()
@@ -1035,8 +1032,8 @@ def manage_campaign_members(request, campaign_pk):
     campaign = get_object_or_404(Campaign, pk=campaign_pk)
     membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
     
-    # Only DMs can manage members
-    if membership.role != 'DM':
+        # Only DMs can manage members
+    if membership and membership.role != 'DM':
         messages.error(request, 'Only Dungeon Masters can manage campaign members.')
         return redirect('campaigns:campaign_detail', pk=campaign_pk)
     
@@ -1064,8 +1061,8 @@ def add_campaign_member(request, campaign_pk):
     campaign = get_object_or_404(Campaign, pk=campaign_pk)
     membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
     
-    # Only DMs can add members
-    if membership.role != 'DM':
+        # Only DMs can add members
+    if membership and membership.role != 'DM':
         return JsonResponse({'error': 'Only Dungeon Masters can add members'}, status=403)
     
     user_id = request.POST.get('user_id')
@@ -1172,8 +1169,8 @@ def leave_campaign(request, campaign_pk):
     campaign = get_object_or_404(Campaign, pk=campaign_pk)
     membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
     
-    # DMs cannot leave their own campaigns (they must delete or transfer first)
-    if membership.role == 'DM':
+        # DMs cannot leave their own campaigns (they must delete or transfer first)
+    if membership and membership.role == 'DM':
         return JsonResponse({'error': 'As Dungeon Master, you cannot leave this campaign. You can delete it or transfer DM role to another player.'}, status=403)
     
     # Ensure at least one member remains
@@ -1311,8 +1308,8 @@ def edit_campaign_rule_book(request, campaign_pk):
     campaign = get_object_or_404(Campaign, pk=campaign_pk)
     membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
     
-    # Only DMs can edit the rule book
-    if membership.role != 'DM':
+        # Only DMs can edit the rule book
+    if membership and membership.role != 'DM':
         messages.error(request, 'Only the Dungeon Master can edit the campaign rule book.')
         return redirect('campaigns:view_rule_book', campaign_pk=campaign_pk)
     
