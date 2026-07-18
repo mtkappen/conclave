@@ -1239,11 +1239,11 @@ def edit_campaign_rule_book(request, campaign_pk):
         if not title:
             messages.error(request, 'Rule book title is required.')
         else:
-            rule_book.title = title
+                        rule_book.title = title
             rule_book.content = content
             rule_book.save()
             messages.success(request, 'Campaign rule book has been updated!')
-            return redirect('campaigns:view_rule_book', pk=campaign_pk)
+            return redirect('campaigns:view_rule_book', campaign_pk=campaign_pk)
     
     context = {
         'campaign': campaign,
