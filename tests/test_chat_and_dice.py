@@ -29,11 +29,13 @@ class TestChatMessages:
         """Test posting a chat message successfully."""
         campaign = db_setup['campaign']
         
+        # Test with form data (not JSON) to match actual usage
         response = client_auth.post(reverse('campaigns:post_chat_message', 
                                            kwargs={'campaign_pk': campaign.id}), {
-            'message': 'Hello, adventurers!',
-            'timestamp': '2024-01-01T12:00:00'
-        }, content_type='application/json')
+            'content': 'Hello, adventurers!',
+            'visibility_type': 'PUBLIC',
+            'message_type': 'OOC_RELEVANT'
+        })
         
         # Should return success response
         assert response.status_code in [200, 201]
@@ -66,10 +68,11 @@ class TestChatMessages:
         
         response = client_auth.post(reverse('campaigns:post_chat_message', 
                                            kwargs={'campaign_pk': other_campaign.id}), {
-            'message': 'Intruder message'
+            'content': 'Intruder message',
+            'visibility_type': 'PUBLIC'
         })
         
-        # Should redirect or return error
+        # Should redirect or return error (403 for forbidden, not 500)
         assert response.status_code in [301, 302, 403]
 
     def test_edit_own_message(self, client_auth, db_setup):
@@ -88,8 +91,8 @@ class TestChatMessages:
             'content': 'Edited message'
         })
         
-        # Should succeed
-        assert response.status_code in [200, 301, 302]
+        # Should succeed (returns JSON, not redirect)
+        assert response.status_code == 200
 
     def test_cannot_edit_others_messages(self, client_auth, db_setup):
         """Test that users cannot edit other users' messages."""
@@ -130,8 +133,8 @@ class TestChatMessages:
         response = client_auth.post(reverse('campaigns:delete_chat_message', 
                                            kwargs={'message_pk': message.id}))
         
-        # Should succeed
-        assert response.status_code in [301, 302]
+        # Should succeed (returns JSON, not redirect)
+        assert response.status_code == 200
 
     def test_cannot_delete_others_messages(self, client_auth, db_setup):
         """Test that users cannot delete other users' messages."""
@@ -165,11 +168,12 @@ class TestDiceRolling:
         """Test posting a dice roll successfully."""
         campaign = db_setup['campaign']
         
+        # Test with form data (not JSON) to match actual usage
         response = client_auth.post(reverse('campaigns:post_dice_roll', 
                                            kwargs={'campaign_pk': campaign.id}), {
-            'dice_expression': '2d6+3',
+            'formula': '2d6+3',
             'result': 10,
-            'description': 'Attack roll'
+            'visibility': 'PUBLIC'
         })
         
         # Should return success response
@@ -203,10 +207,11 @@ class TestDiceRolling:
         
         response = client_auth.post(reverse('campaigns:post_dice_roll', 
                                            kwargs={'campaign_pk': other_campaign.id}), {
-            'dice_expression': '1d20'
+            'formula': '1d20',
+            'result': 15
         })
         
-        # Should redirect or return error
+        # Should redirect or return error (403 for forbidden, not 404)
         assert response.status_code in [301, 302, 403]
 
     def test_various_dice_expressions(self, client_auth, db_setup):
@@ -215,21 +220,22 @@ class TestDiceRolling:
         
         # Test different dice expressions
         test_cases = [
-            ('1d20', 'Single d20 roll'),
-            ('3d6', 'Multiple d6 rolls'),
-            ('2d8+5', 'Dice with modifier'),
-            ('4d4-2', 'Dice with subtraction'),
+            ('1d20', 15, 'Single d20 roll'),
+            ('3d6', 12, 'Multiple d6 rolls'),
+            ('2d8+5', 18, 'Dice with modifier'),
+            ('4d4-2', 10, 'Dice with subtraction'),
         ]
         
-        for expression, description in test_cases:
+        for expression, result, description in test_cases:
             response = client_auth.post(reverse('campaigns:post_dice_roll', 
                                                kwargs={'campaign_pk': campaign.id}), {
-                'dice_expression': expression,
-                'description': description
+                'formula': expression,
+                'result': result,
+                'visibility': 'PUBLIC'
             })
             
             # Should accept the dice roll
-            assert response.status_code in [200, 201, 301, 302]
+            assert response.status_code in [200, 201]
 
 
 class TestChatIntegration:

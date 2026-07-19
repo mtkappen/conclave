@@ -125,9 +125,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # Login/Logout URLs
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
-LOGOUT_REDIRECT_URL = 'login'
+LOGIN_URL = 'campaigns:login'
+LOGIN_REDIRECT_URL = 'campaigns:dashboard'
+LOGOUT_REDIRECT_URL = 'campaigns:login'
 
 # Chat refresh interval (for polling) - 3 seconds
 CHAT_REFRESH_INTERVAL = 3000
