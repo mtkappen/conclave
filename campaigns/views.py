@@ -1249,8 +1249,11 @@ def edit_chat_message(request, message_pk):
     is_dm_in_campaign = membership and membership.role == 'DM'
     is_sender = message.sender and message.sender == request.user
     
-    can_edit_content = is_dm_in_campaign or is_sender
-    can_edit_type = is_dm_in_campaign
+    # Admin override mode: superuser viewing without campaign membership
+    is_admin_override = request.user.is_superuser and not membership
+    
+    can_edit_content = is_dm_in_campaign or is_sender or is_admin_override
+    can_edit_type = is_dm_in_campaign or is_admin_override
     
     if not can_edit_content:
         return JsonResponse({'error': 'You do not have permission to edit this message'}, status=403)
@@ -1286,17 +1289,14 @@ def delete_chat_message(request, message_pk):
     campaign = message.campaign
     membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
     
-    # Handle admin viewing mode (admin without membership but with access)
-    if not membership and request.user.is_superuser:
-        class TempMembership:
-            role = 'DM'
-        membership = TempMembership()
-    
-    # Check permissions - only DMs or message sender can delete
+    # Check permissions - only DMs, admins in override mode, or message sender can delete
     is_dm = membership and membership.role == 'DM'
     is_sender = message.sender and message.sender == request.user
     
-    if not (is_dm or is_sender):
+    # Admin override mode: superuser viewing without campaign membership
+    is_admin_override = request.user.is_superuser and not membership
+    
+    if not (is_dm or is_sender or is_admin_override):
         return JsonResponse({'error': 'You do not have permission to delete this message'}, status=403)
     
     message.delete()
