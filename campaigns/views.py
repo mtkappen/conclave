@@ -479,6 +479,7 @@ def campaign_detail(request, pk):
         'membership': membership,
         'player_characters': player_characters,
         'npcs': npcs,
+        'characters': npcs,
         'dm_user_ids': dm_user_ids,
         'recent_messages': recent_messages,
         'has_character': has_character,

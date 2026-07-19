@@ -6,6 +6,13 @@
   - Need to redirect to dashboard or handle stale membership references
 
 ## Medium Priority 🟡
+- [ ] 🔍 NPC Selection in Chat - DMs cannot easily choose which NPC to speak as:
+  - Current implementation lacks NPC selector for IC messages
+  - With many NPCs, scrolling through a single list is not practical
+  - Solution: Add searchable dropdown with type-ahead filtering (type character name to filter)
+  - Optionally group NPCs by campaign/character sheet for easier navigation
+  - Should show avatar preview when selecting
+
 - [ ] 🔧 Fix chat message edit/delete buttons disappearing on hover:
   - Edit and delete buttons do not stay visible while hovering over messages
   - Cannot click the buttons because they disappear before mouse can reach them
@@ -22,7 +29,8 @@
   - Add character selector dropdown in chat input for DMs
   - Display NPC name/avatar instead of DM's name when posting as character
 
-- [ ] ⏳ Chat Message Type Editing - Allow DM/Admin to change message type (IC/OOC_RELEVANT/OOC_OFFTOPIC) for existing messages:
-  - Current implementation requires opening edit modal (too slow for bulk editing)
-  - Need a "rapid edit mode" where DMs/admins can quickly cycle through messages and change types
-  - Should allow inline editing without diving into separate menus
+- [ ] ⏳ Chat Message Type Editing - Rapid keyboard-driven full-screen mode:
+  - Activate designated mode that pulls up chat in full-screen view
+  - Navigate through messages rapidly using only keyboard (down arrow to move)
+  - Read each message and change type with single key press (IC/OOC_RELEVANT/OOC_OFFTOPIC)
+  - Auto-advance to next message after type change for efficient bulk editing

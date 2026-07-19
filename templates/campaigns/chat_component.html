@@ -65,13 +65,14 @@
     <div class="chat-input-area">
         <div class="input-controls">
             <select id="messageType" class="form-control" style="width: auto; margin-bottom: 0;">
-                <option value="OOC_RELEVANT">🗣️ Out of Character</option>
-                {% if membership.role == 'PLAYER' and has_character %}
-                <option value="IC">🎭 In Character</option>
-                {% endif %}
                 {% if membership.role == 'DM' %}
                 <option value="OOC_RELEVANT">🗣️ Out of Character (DM)</option>
                 <option value="IC">🎭 In Character (as NPC)</option>
+                {% elif membership.role == 'PLAYER' and has_character %}
+                <option value="OOC_RELEVANT">🗣️ Out of Character</option>
+                <option value="IC">🎭 In Character</option>
+                {% else %}
+                <option value="OOC_RELEVANT">🗣️ Out of Character</option>
                 {% endif %}
             </select>
             
@@ -79,13 +80,27 @@
             {% if membership.role == 'DM' and characters %}
             <div id="npcCharacterContainer" style="display: none; margin-bottom: 0.5rem;">
                 <label style="color: #858585; font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Select NPC Character:</label>
-                <select id="npcCharacterSelect" class="form-control" style="width: 100%;">
-                    {% for char in characters %}
-                        <option value="{{ char.pk }}" data-name="{{ char.name }}" data-avatar="{% if char.avatar %}{{ char.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}">
-                            {{ char.name }} ({{ char.class_name|default:'NPC' }})
-                        </option>
-                    {% endfor %}
-                </select>
+                <div style="position: relative;">
+                    <input type="text" id="npcSearchInput" placeholder="🔍 Type to search NPCs..." 
+                           style="width: 100%; padding: 0.5rem; background-color: #2d2d30; border: 1px solid #3c3c3c; color: #d4d4d4; border-radius: 4px;"
+                           onkeyup="filterNPCList()">
+                    <div id="npcDropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; max-height: 250px; overflow-y: auto; background-color: #2d2d30; border: 1px solid #3c3c3c; border-radius: 4px; z-index: 1000;">
+                        {% for char in characters %}
+                            <div class="npc-option" data-value="{{ char.pk }}" data-name="{{ char.name }}" 
+                                 data-avatar="{% if char.avatar %}{{ char.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}"
+                                 style="padding: 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;"
+                                 onclick="selectNPC('{{ char.pk }}', '{{ char.name }}', '{% if char.avatar %}{{ char.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}')">
+                                <img src="{% if char.avatar %}{{ char.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
+                                     style="width: 32px; height: 32px; border-radius: 50%;" alt="">
+                                <div>
+                                    <strong>{{ char.name }}</strong>
+                                    {% if char.class_name %}<br><small style="color: #858585;">{{ char.class_name }}</small>{% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" id="npcCharacterSelect" name="npc_character_id">
+                </div>
             </div>
             {% endif %}
             
@@ -1062,6 +1077,39 @@ function toggleNpcCharacterSelector() {
     }
 }
 
+function filterNPCList() {
+    const searchInput = document.getElementById('npcSearchInput').value.toLowerCase();
+    const npcOptions = document.querySelectorAll('.npc-option');
+    let visibleCount = 0;
+    
+    npcOptions.forEach(option => {
+        const name = option.getAttribute('data-name').toLowerCase();
+        if (name.includes(searchInput)) {
+            option.style.display = 'flex';
+            visibleCount++;
+        } else {
+            option.style.display = 'none';
+        }
+    });
+    
+    const dropdown = document.getElementById('npcDropdown');
+    dropdown.style.display = visibleCount > 0 ? 'block' : 'none';
+}
+
+function selectNPC(id, name, avatar) {
+    document.getElementById('npcCharacterSelect').value = id;
+    document.getElementById('npcSearchInput').value = name;
+    document.getElementById('npcDropdown').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+    const npcContainer = document.getElementById('npcCharacterContainer');
+    if (npcContainer && !npcContainer.contains(e.target)) {
+        const dropdown = document.getElementById('npcDropdown');
+        if (dropdown) dropdown.style.display = 'none';
+    }
+});
+
 async function sendMessage() {
     const editor = document.getElementById('messageInput');
     const messageType = document.getElementById('messageType').value;
@@ -1071,11 +1119,17 @@ async function sendMessage() {
     let npcCharacterId = null;
     let npcCharacterName = null;
     let npcCharacterAvatar = null;
-    if (messageType === 'IC' && npcCharacterSelect) {
-        const selectedOption = npcCharacterSelect.options[npcCharacterSelect.selectedIndex];
-        npcCharacterId = selectedOption.value;
-        npcCharacterName = selectedOption.getAttribute('data-name');
-        npcCharacterAvatar = selectedOption.getAttribute('data-avatar');
+    if (messageType === 'IC') {
+        const npcSelect = document.getElementById('npcCharacterSelect');
+        if (npcSelect && npcSelect.value) {
+            npcCharacterId = npcSelect.value;
+            npcCharacterName = document.getElementById('npcSearchInput').value;
+            // Get avatar from the selected option in dropdown
+            const selectedOption = document.querySelector(`.npc-option[data-value="${npcCharacterId}"]`);
+            if (selectedOption) {
+                npcCharacterAvatar = selectedOption.getAttribute('data-avatar');
+            }
+        }
     }
     
     // Get HTML content from the contenteditable div
