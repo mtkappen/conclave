@@ -403,7 +403,11 @@ def create_campaign(request):
 @login_required
 def campaign_detail(request, pk):
     """View a specific campaign."""
-    campaign = get_object_or_404(Campaign, pk=pk)
+    campaign = Campaign.objects.filter(pk=pk).first()
+    
+    if not campaign:
+        messages.error(request, 'This campaign no longer exists.')
+        return redirect('campaigns:dashboard')
     
     # Get membership (admins can view any campaign without membership)
     membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
