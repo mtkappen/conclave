@@ -29,16 +29,19 @@ class TestChatMessages:
         """Test posting a chat message successfully."""
         campaign = db_setup['campaign']
         
-        # Test with form data (not JSON) to match actual usage
+        # Send JSON data to match actual API usage
         response = client_auth.post(reverse('campaigns:post_chat_message', 
-                                           kwargs={'campaign_pk': campaign.id}), {
-            'content': 'Hello, adventurers!',
-            'visibility_type': 'PUBLIC',
-            'message_type': 'OOC_RELEVANT'
-        })
+                                           kwargs={'campaign_pk': campaign.id}),
+            json.dumps({
+                'content': 'Hello, adventurers!',
+                'visibility_type': 'PUBLIC',
+                'message_type': 'OOC_RELEVANT'
+            }),
+            content_type='application/json'
+        )
         
         # Should return success response
-        assert response.status_code in [200, 201]
+        assert response.status_code == 200
 
     def test_post_message_requires_authentication(self, client, db_setup):
         """Test that posting messages requires authentication."""
@@ -67,10 +70,13 @@ class TestChatMessages:
         )
         
         response = client_auth.post(reverse('campaigns:post_chat_message', 
-                                           kwargs={'campaign_pk': other_campaign.id}), {
-            'content': 'Intruder message',
-            'visibility_type': 'PUBLIC'
-        })
+                                           kwargs={'campaign_pk': other_campaign.id}),
+            json.dumps({
+                'content': 'Intruder message',
+                'visibility_type': 'PUBLIC'
+            }),
+            content_type='application/json'
+        )
         
         # Should redirect or return error (403 for forbidden, not 500)
         assert response.status_code in [301, 302, 403]
@@ -87,9 +93,10 @@ class TestChatMessages:
         )
         
         response = client_auth.post(reverse('campaigns:edit_chat_message', 
-                                           kwargs={'message_pk': message.id}), {
-            'content': 'Edited message'
-        })
+                                           kwargs={'message_pk': message.id}),
+            json.dumps({ 'content': 'Edited message' }),
+            content_type='application/json'
+        )
         
         # Should succeed (returns JSON, not redirect)
         assert response.status_code == 200
@@ -168,16 +175,19 @@ class TestDiceRolling:
         """Test posting a dice roll successfully."""
         campaign = db_setup['campaign']
         
-        # Test with form data (not JSON) to match actual usage
+        # Send JSON data to match actual API usage
         response = client_auth.post(reverse('campaigns:post_dice_roll', 
-                                           kwargs={'campaign_pk': campaign.id}), {
-            'formula': '2d6+3',
-            'result': 10,
-            'visibility': 'PUBLIC'
-        })
+                                           kwargs={'campaign_pk': campaign.id}),
+            json.dumps({
+                'formula': '2d6+3',
+                'result': 10,
+                'visibility': 'PUBLIC'
+            }),
+            content_type='application/json'
+        )
         
         # Should return success response
-        assert response.status_code in [200, 201]
+        assert response.status_code == 200
 
     def test_post_dice_roll_requires_authentication(self, client, db_setup):
         """Test that posting dice rolls requires authentication."""
@@ -206,10 +216,13 @@ class TestDiceRolling:
         )
         
         response = client_auth.post(reverse('campaigns:post_dice_roll', 
-                                           kwargs={'campaign_pk': other_campaign.id}), {
-            'formula': '1d20',
-            'result': 15
-        })
+                                           kwargs={'campaign_pk': other_campaign.id}),
+            json.dumps({
+                'formula': '1d20',
+                'result': 15
+            }),
+            content_type='application/json'
+        )
         
         # Should redirect or return error (403 for forbidden, not 404)
         assert response.status_code in [301, 302, 403]
@@ -228,14 +241,17 @@ class TestDiceRolling:
         
         for expression, result, description in test_cases:
             response = client_auth.post(reverse('campaigns:post_dice_roll', 
-                                               kwargs={'campaign_pk': campaign.id}), {
-                'formula': expression,
-                'result': result,
-                'visibility': 'PUBLIC'
-            })
+                                               kwargs={'campaign_pk': campaign.id}),
+                json.dumps({
+                    'formula': expression,
+                    'result': result,
+                    'visibility': 'PUBLIC'
+                }),
+                content_type='application/json'
+            )
             
             # Should accept the dice roll
-            assert response.status_code in [200, 201]
+            assert response.status_code == 200
 
 
 class TestChatIntegration:

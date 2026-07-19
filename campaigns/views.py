@@ -800,7 +800,9 @@ def post_chat_message(request, campaign_pk):
     """Post a new chat message."""
     try:
         campaign = get_object_or_404(Campaign, pk=campaign_pk)
-        membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+        membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+        if not membership:
+            return JsonResponse({'error': 'You are not a member of this campaign'}, status=403)
         
         # Parse JSON body with error handling
         try:
@@ -922,7 +924,9 @@ def post_chat_message(request, campaign_pk):
 def post_dice_roll(request, campaign_pk):
     """Post a dice roll result and create a chat message."""
     campaign = get_object_or_404(Campaign, pk=campaign_pk)
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+    if not membership:
+        return JsonResponse({'error': 'You are not a member of this campaign'}, status=403)
     
     data = json.loads(request.body)
     formula = data.get('formula', '').strip()
@@ -1205,7 +1209,7 @@ def admin_view_secret_whispers(request, campaign_pk):
     dm_only_messages = ChatMessage.objects.filter(
         campaign=campaign,
         visibility_type='DM_ONLY'
-    ).select_related('sender', 'recipient', 'campaign').order_by('-created_at')
+    ).select_related('sender', 'campaign').prefetch_related('recipients').order_by('-created_at')
     
     context = {
         'campaign': campaign,
