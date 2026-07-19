@@ -706,7 +706,6 @@ def delete_campaign(request, pk):
         campaign_title = campaign.title
         
         # Delete related objects first to avoid ProtectedError
-        from .models import CharacterSheet, CampaignGameSettings, ChatMessage, DiceRollLog, PersonalNotebook, PartyGroup, CampaignMembership
         CharacterSheet.objects.filter(campaign=campaign).delete()
         ChatMessage.objects.filter(campaign=campaign).delete()
         DiceRollLog.objects.filter(campaign=campaign).delete()
