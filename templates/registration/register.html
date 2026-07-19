@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 
-{% block title %}Create Account - Conclave{% endblock %}
+{% block title %}Create Account - TaskFlow{% endblock %}
 
 {% block content %}
 <div style="max-width: 520px; margin: 2.5rem auto;">
     <div class="card">
-        <h2 style="text-align: center; margin-bottom: 1.25rem; font-size: 1.6rem;">Join Conclave</h2>
+        <h2 style="text-align: center; margin-bottom: 1.25rem; font-size: 1.6rem;">Join TaskFlow</h2>
         
         <form method="post">
             {% csrf_token %}
@@ -67,8 +67,8 @@
     </div>
     
     <div class="card" style="margin-top: 1.5rem; font-size: 0.9rem; color: #aaa; padding: 1.25rem;">
-        <strong>Why Conclave?</strong><br>
-        Collaborate on tabletop campaigns, create characters, roll dice, and tell stories together.
+        <strong>Why TaskFlow?</strong><br>
+        Organize your tasks, manage projects, and boost productivity with our simple interface.
     </div>
 </div>
 {% endblock %}
