@@ -453,9 +453,14 @@ def campaign_detail(request, pk):
     
     # Get characters for this campaign (membership should never be None here due to earlier checks)
     if membership and membership.role == 'DM':
-        characters = CharacterSheet.objects.filter(campaign=campaign).select_related('user')
+        # DMs see all player characters (excluding their own NPCs which go in the NPC section)
+        player_characters = CharacterSheet.objects.filter(campaign=campaign).exclude(user=request.user).select_related('user')
+        npcs = CharacterSheet.objects.filter(campaign=campaign, user=request.user).select_related('user')
     else:
-        characters = CharacterSheet.objects.filter(campaign=campaign, user=request.user)
+        # Players see all characters except those owned by DMs (NPCs)
+        dm_user_ids = [m.user_id for m in CampaignMembership.objects.filter(campaign=campaign, role='DM')]
+        player_characters = CharacterSheet.objects.filter(campaign=campaign).exclude(user__in=dm_user_ids).select_related('user')
+        npcs = []
     
     # Get recent chat messages (will be expanded in Phase 2)
     recent_messages = ChatMessage.objects.filter(campaign=campaign).order_by('-created_at')[:10]
@@ -466,10 +471,15 @@ def campaign_detail(request, pk):
     # Get all campaign members with their roles and characters
     all_memberships = CampaignMembership.objects.filter(campaign=campaign).select_related('user')
     
+    # Get list of DM user IDs for filtering player characters (players shouldn't see NPCs)
+    dm_user_ids = [m.user_id for m in all_memberships if m.role == 'DM']
+    
     context = {
         'campaign': campaign,
         'membership': membership,
-        'characters': characters,
+        'player_characters': player_characters,
+        'npcs': npcs,
+        'dm_user_ids': dm_user_ids,
         'recent_messages': recent_messages,
         'has_character': has_character,
         'is_admin_viewing': is_admin_viewing,
@@ -482,8 +492,17 @@ def campaign_detail(request, pk):
 @login_required
 def create_character(request, campaign_pk):
     """Create a new character for a campaign."""
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+    campaign = Campaign.objects.filter(pk=campaign_pk).first()
+    
+    if not campaign:
+        messages.error(request, 'This campaign no longer exists.')
+        return redirect('campaigns:dashboard')
+    
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+    
+    if not membership:
+        messages.error(request, 'You are not a member of this campaign.')
+        return redirect('campaigns:dashboard')
     
     # Get game settings for this campaign
     try:
@@ -678,8 +697,17 @@ def add_inventory_item(request, character_pk):
 @login_required
 def dm_character_roster(request, campaign_pk):
     """DM view to see all characters in a campaign."""
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+    campaign = Campaign.objects.filter(pk=campaign_pk).first()
+    
+    if not campaign:
+        messages.error(request, 'This campaign no longer exists.')
+        return redirect('campaigns:dashboard')
+    
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+    
+    if not membership:
+        messages.error(request, 'You are not a member of this campaign.')
+        return redirect('campaigns:dashboard')
     
     # Only DMs can access this
     if membership and membership.role != 'DM':
@@ -698,7 +726,11 @@ def dm_character_roster(request, campaign_pk):
 @login_required
 def delete_campaign(request, pk):
     """Delete a campaign (DM or Admin only)."""
-    campaign = get_object_or_404(Campaign, pk=pk)
+    campaign = Campaign.objects.filter(pk=pk).first()
+    
+    if not campaign:
+        messages.error(request, 'This campaign no longer exists.')
+        return redirect('campaigns:dashboard')
     
     # Check if user is a global superuser (system admin) OR is the DM of this campaign
     is_global_admin = request.user.is_superuser
@@ -779,7 +811,10 @@ def delete_character(request, pk):
 def get_chat_messages(request, campaign_pk):
     """Fetch chat messages for a campaign with visibility filtering."""
     try:
-        campaign = get_object_or_404(Campaign, pk=campaign_pk)
+        campaign = Campaign.objects.filter(pk=campaign_pk).first()
+        
+        if not campaign:
+            return JsonResponse({'error': 'This campaign no longer exists'}, status=404)
         
         # Check if user is a member of this campaign
         membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
@@ -898,11 +933,17 @@ def get_chat_messages(request, campaign_pk):
             if msg.sender and msg.sender.avatar:
                 sender_avatar = msg.sender.avatar.url
             
-            # Determine display name based on message type (for all IC messages from players)
+            # Determine display name based on message type (for all IC messages from players and NPCs)
             display_sender_name = sender_name
             character_avatar = None
-            if msg.message_type == 'IC' and msg.sender:
-                # Show character name for IC messages from any player
+            
+            # Check if this is an NPC message posted by a DM
+            if msg.message_type == 'IC' and msg.npc_character_id:
+                # Show NPC name for IC messages posted as an NPC
+                display_sender_name = msg.npc_character_name or sender_name
+                character_avatar = msg.get_npc_avatar_url()
+            elif msg.message_type == 'IC' and msg.sender:
+                # Show character name for IC messages from players
                 try:
                     char = CharacterSheet.objects.get(user=msg.sender, campaign=campaign)
                     display_sender_name = char.name
@@ -985,7 +1026,11 @@ def get_chat_messages(request, campaign_pk):
 def post_chat_message(request, campaign_pk):
     """Post a new chat message."""
     try:
-        campaign = get_object_or_404(Campaign, pk=campaign_pk)
+        campaign = Campaign.objects.filter(pk=campaign_pk).first()
+        
+        if not campaign:
+            return JsonResponse({'error': 'This campaign no longer exists'}, status=404)
+        
         membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
         if not membership:
             return JsonResponse({'error': 'You are not a member of this campaign'}, status=403)
@@ -1000,6 +1045,9 @@ def post_chat_message(request, campaign_pk):
         visibility_type = data.get('visibility_type', 'PUBLIC')
         message_type = data.get('message_type', 'OOC_RELEVANT')
         recipient_user_ids = data.get('recipient_user_ids', [])  # Now accepts multiple recipients
+        npc_character_id = data.get('npc_character_id')
+        npc_character_name = data.get('npc_character_name')
+        npc_character_avatar = data.get('npc_character_avatar')
         
         if not content:
             return JsonResponse({'error': 'Message content is required'}, status=400)
@@ -1091,6 +1139,8 @@ def post_chat_message(request, campaign_pk):
             visibility_type=visibility_type,
             party_group=party_group,
             message_type=message_type,
+            npc_character_id=npc_character_id if npc_character_id else None,
+            npc_character_name=npc_character_name or '',
         )
         
         # Add recipients for SECRET_WHISPER (must be done after message is saved)
@@ -1111,7 +1161,11 @@ def post_chat_message(request, campaign_pk):
 @require_POST
 def post_dice_roll(request, campaign_pk):
     """Post a dice roll result and create a chat message."""
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
+    campaign = Campaign.objects.filter(pk=campaign_pk).first()
+    
+    if not campaign:
+        return JsonResponse({'error': 'This campaign no longer exists'}, status=404)
+    
     membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
     if not membership:
         return JsonResponse({'error': 'You are not a member of this campaign'}, status=403)
@@ -1175,15 +1229,39 @@ def edit_chat_message(request, message_pk):
             role = 'DM'
         membership = TempMembership()
     
-            # Check permissions
-    if membership and membership.role != 'DM' and message.sender != request.user:
-        return JsonResponse({'error': 'You do not have permission to edit this message'}, status=403)
+    # Parse JSON body with error handling (support both form data and JSON)
+    try:
+        if request.content_type == 'application/json':
+            data = json.loads(request.body) if request.body else {}
+        else:
+            data = {k: v for k, v in request.POST.items()}
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
     
-    data = json.loads(request.body)
-    content = data.get('content', '').strip()
+    content = data.get('content', '').strip() if isinstance(data, dict) else ''
+    message_type = data.get('message_type') if isinstance(data, dict) else None  # Optional: allow changing message type
     
     if not content:
         return JsonResponse({'error': 'Message content is required'}, status=400)
+    
+    # Check permissions - only DMs/Admins can edit message type, everyone can edit content
+    can_edit_content = membership and membership.role == 'DM' or (message.sender and message.sender == request.user)
+    can_edit_type = membership and membership.role == 'DM'
+    
+    if not can_edit_content:
+        return JsonResponse({'error': 'You do not have permission to edit this message'}, status=403)
+    
+    # Only DMs/Admins can change the message type
+    if message_type and message_type != message.message_type:
+        if not can_edit_type:
+            return JsonResponse({'error': 'Only DMs can change message type'}, status=403)
+        
+        # Validate message type
+        valid_types = ['IC', 'OOC_RELEVANT', 'OOC_OFFTOPIC']
+        if message_type not in valid_types:
+            return JsonResponse({'error': f'Invalid message type. Must be one of: {valid_types}'}, status=400)
+        
+        message.message_type = message_type
     
     message.content = content
     message.is_edited = True
@@ -1192,6 +1270,7 @@ def edit_chat_message(request, message_pk):
     return JsonResponse({
         'success': True,
         'message_id': message.id,
+        'message_type': message.message_type,
     })
 
 
@@ -1221,8 +1300,17 @@ def delete_chat_message(request, message_pk):
 @login_required
 def manage_campaign_members(request, campaign_pk):
     """DM view to manage campaign members and assign roles."""
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+    campaign = Campaign.objects.filter(pk=campaign_pk).first()
+    
+    if not campaign:
+        messages.error(request, 'This campaign no longer exists.')
+        return redirect('campaigns:dashboard')
+    
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+    
+    if not membership:
+        messages.error(request, 'You are not a member of this campaign.')
+        return redirect('campaigns:dashboard')
     
         # Only DMs can manage members
     if membership and membership.role != 'DM':
@@ -1250,8 +1338,15 @@ def manage_campaign_members(request, campaign_pk):
 @require_POST
 def add_campaign_member(request, campaign_pk):
     """Add a new member to the campaign."""
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+    campaign = Campaign.objects.filter(pk=campaign_pk).first()
+    
+    if not campaign:
+        return JsonResponse({'error': 'This campaign no longer exists'}, status=404)
+    
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+    
+    if not membership:
+        return JsonResponse({'error': 'You are not a member of this campaign'}, status=403)
     
         # Only DMs can add members
     if membership and membership.role != 'DM':
@@ -1358,8 +1453,15 @@ def remove_campaign_member(request, membership_pk):
 @require_POST
 def leave_campaign(request, campaign_pk):
     """Allow a user to leave a campaign."""
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+    campaign = Campaign.objects.filter(pk=campaign_pk).first()
+    
+    if not campaign:
+        return JsonResponse({'error': 'This campaign no longer exists'}, status=404)
+    
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+    
+    if not membership:
+        return JsonResponse({'error': 'You are not a member of this campaign'}, status=403)
     
         # DMs cannot leave their own campaigns (they must delete or transfer first)
     if membership and membership.role == 'DM':
@@ -1385,7 +1487,11 @@ def admin_view_secret_whispers(request, campaign_pk):
         messages.error(request, 'Only system administrators can access this feature.')
         return redirect('campaigns:dashboard')
     
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
+    campaign = Campaign.objects.filter(pk=campaign_pk).first()
+    
+    if not campaign:
+        messages.error(request, 'This campaign no longer exists.')
+        return redirect('campaigns:dashboard')
     
     # Get all secret whispers in the campaign
     secret_messages = ChatMessage.objects.filter(
@@ -1411,7 +1517,11 @@ def admin_view_secret_whispers(request, campaign_pk):
 @login_required
 def my_personal_notebook(request, campaign_pk):
     """View and edit personal notebook for a specific campaign. Only visible to the owner."""
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
+    campaign = Campaign.objects.filter(pk=campaign_pk).first()
+    
+    if not campaign:
+        messages.error(request, 'This campaign no longer exists.')
+        return redirect('campaigns:dashboard')
     
     # Check if user is a member of this campaign
     membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
@@ -1473,7 +1583,11 @@ def delete_personal_notebook(request, pk):
 @login_required
 def view_campaign_rule_book(request, campaign_pk):
     """View the campaign rule book. Accessible to all members."""
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
+    campaign = Campaign.objects.filter(pk=campaign_pk).first()
+    
+    if not campaign:
+        messages.error(request, 'This campaign no longer exists.')
+        return redirect('campaigns:dashboard')
     
     # Check if user is a member of this campaign
     membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
@@ -1497,8 +1611,17 @@ def view_campaign_rule_book(request, campaign_pk):
 @login_required
 def edit_campaign_rule_book(request, campaign_pk):
     """Edit the campaign rule book. Only DM can edit."""
-    campaign = get_object_or_404(Campaign, pk=campaign_pk)
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+    campaign = Campaign.objects.filter(pk=campaign_pk).first()
+    
+    if not campaign:
+        messages.error(request, 'This campaign no longer exists.')
+        return redirect('campaigns:dashboard')
+    
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
+    
+    if not membership:
+        messages.error(request, 'You are not a member of this campaign.')
+        return redirect('campaigns:dashboard')
     
         # Only DMs can edit the rule book
     if membership and membership.role != 'DM':

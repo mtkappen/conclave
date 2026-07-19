@@ -71,8 +71,23 @@
                 {% endif %}
                 {% if membership.role == 'DM' %}
                 <option value="OOC_RELEVANT">🗣️ Out of Character (DM)</option>
+                <option value="IC">🎭 In Character (as NPC)</option>
                 {% endif %}
             </select>
+            
+            <!-- NPC Character Selector (only for DMs) -->
+            {% if membership.role == 'DM' and characters %}
+            <div id="npcCharacterContainer" style="display: none; margin-bottom: 0.5rem;">
+                <label style="color: #858585; font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">Select NPC Character:</label>
+                <select id="npcCharacterSelect" class="form-control" style="width: 100%;">
+                    {% for char in characters %}
+                        <option value="{{ char.pk }}" data-name="{{ char.name }}" data-avatar="{% if char.avatar %}{{ char.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}">
+                            {{ char.name }} ({{ char.class_name|default:'NPC' }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
             
                         <select id="visibilityType" class="form-control" style="width: auto; margin-bottom: 0;" onchange="toggleRecipientSelect()">
                 <option value="PUBLIC">👥 Public</option>
@@ -793,6 +808,7 @@ let currentTab = 'all';
 let autoRefreshInterval;
 // Use Django template variable with fallback to prevent JS syntax errors during linting
 const CAMPAIGN_ID = "{{ campaign.pk }}" || 0;
+const USER_ROLE = "{% if membership %}{{ membership.role }}{% endif %}";
 
 // Initialize chat on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -1035,10 +1051,32 @@ function toggleRecipientSelect() {
     }
 }
 
+function toggleNpcCharacterSelector() {
+    const messageType = document.getElementById('messageType').value;
+    const npcCharacterContainer = document.getElementById('npcCharacterContainer');
+    
+    if (messageType === 'IC' && npcCharacterContainer) {
+        npcCharacterContainer.style.display = 'block';
+    } else if (npcCharacterContainer) {
+        npcCharacterContainer.style.display = 'none';
+    }
+}
+
 async function sendMessage() {
     const editor = document.getElementById('messageInput');
     const messageType = document.getElementById('messageType').value;
     const visibilityType = document.getElementById('visibilityType').value;
+    
+    // Get NPC character info if DM is posting as an NPC
+    let npcCharacterId = null;
+    let npcCharacterName = null;
+    let npcCharacterAvatar = null;
+    if (messageType === 'IC' && npcCharacterSelect) {
+        const selectedOption = npcCharacterSelect.options[npcCharacterSelect.selectedIndex];
+        npcCharacterId = selectedOption.value;
+        npcCharacterName = selectedOption.getAttribute('data-name');
+        npcCharacterAvatar = selectedOption.getAttribute('data-avatar');
+    }
     
     // Get HTML content from the contenteditable div
     const content = editor.innerHTML.trim();
@@ -1075,7 +1113,10 @@ async function sendMessage() {
                 content: content,  // Send HTML content
                 message_type: messageType,
                 visibility_type: visibilityType,
-                recipient_user_ids: recipientUserIds  // Send array of recipient IDs
+                recipient_user_ids: recipientUserIds,  // Send array of recipient IDs
+                npc_character_id: npcCharacterId,  // NPC character ID for DMs posting as NPCs
+                npc_character_name: npcCharacterName,
+                npc_character_avatar: npcCharacterAvatar
             })
         });
         
@@ -1106,8 +1147,20 @@ async function editMessage(messageId) {
     const messageContentEl = messageBubble.querySelector('.message-content');
     const currentContent = messageContentEl ? messageContentEl.innerHTML : '';
     
+    // Get the message type from the data attribute or header
+    const messageTypeBadge = messageBubble.querySelector('[data-message-type]');
+    const currentMessageType = messageTypeBadge ? messageTypeBadge.getAttribute('data-message-type') : 'OOC_RELEVANT';
+    
+    // Check if user is a DM (we'll add this to the page context)
+    const isDM = typeof USER_ROLE !== 'undefined' && USER_ROLE === 'DM';
+    
     // Show confirmation modal for editing
-    showModal('Edit Message', 'Enter your new message content below:', 'info');
+    let modalTitle = 'Edit Message';
+    let modalText = 'Enter your new message content below:';
+    if (isDM) {
+        modalTitle = 'Edit Message (Type: ' + currentMessageType + ')';
+    }
+    showModal(modalTitle, modalText, 'info');
     
     // Create a temporary rich text editor in the modal
     const modal = document.getElementById('customModal');
@@ -1130,6 +1183,37 @@ async function editMessage(messageId) {
     // Insert after the modal message paragraph
     modalMessage.after(editorDiv);
     
+    // Add message type selector for DMs
+    if (isDM) {
+        const typeLabel = document.createElement('label');
+        typeLabel.textContent = 'Message Type:';
+        typeLabel.style.cssText = 'display: block; color: #858585; font-size: 0.85rem; margin-top: 1rem; margin-bottom: 0.25rem;';
+        
+        const typeSelect = document.createElement('select');
+        typeSelect.id = 'editMessageType';
+        typeSelect.className = 'form-control';
+        typeSelect.style.cssText = 'width: 100%; margin-bottom: 1rem; background-color: #2d2d30; border: 1px solid #3c3c3c; color: #d4d4d4; border-radius: 6px; padding: 0.5rem;';
+        
+        const types = [
+            { value: 'IC', label: '🎭 In Character (IC)' },
+            { value: 'OOC_RELEVANT', label: '🗣️ Out of Character - Relevant' },
+            { value: 'OOC_OFFTOPIC', label: '💬 Out of Character - Off Topic' }
+        ];
+        
+        types.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type.value;
+            option.innerHTML = type.label;
+            if (type.value === currentMessageType) {
+                option.selected = true;
+            }
+            typeSelect.appendChild(option);
+        });
+        
+        modalMessage.after(typeLabel);
+        modalMessage.after(typeSelect);
+    }
+    
     // Focus and place cursor at end for easy editing
     setTimeout(() => {
         editorDiv.focus();
@@ -1145,8 +1229,10 @@ async function editMessage(messageId) {
             return;
         }
         
+        const newMessageType = isDM ? document.getElementById('editMessageType').value : null;
+        
         hideModal();
-        performEditMessage(messageId, newContent);
+        performEditMessage(messageId, newContent, newMessageType);
     };
     
     // Show confirm button
@@ -1156,15 +1242,20 @@ async function editMessage(messageId) {
     confirmBtn.onclick = window.confirmAction;
 }
 
-async function performEditMessage(messageId, newContent) {
+async function performEditMessage(messageId, newContent, newMessageType = null) {
     try {
+        const requestBody = { content: newContent };
+        if (newMessageType) {
+            requestBody.message_type = newMessageType;
+        }
+        
         const response = await fetch(`/chat/message/${messageId}/edit/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCsrfToken()
             },
-            body: JSON.stringify({ content: newContent })
+            body: JSON.stringify(requestBody)
         });
         
         const data = await response.json();
@@ -1315,6 +1406,14 @@ function updateToolbarState() {
 // Add keyboard shortcuts for rich text editor
 document.addEventListener('DOMContentLoaded', function() {
     const editor = document.getElementById('messageInput');
+    const messageTypeSelect = document.getElementById('messageType');
+    
+    // Toggle NPC character selector when message type changes
+    if (messageTypeSelect) {
+        messageTypeSelect.addEventListener('change', toggleNpcCharacterSelector);
+        // Initialize on page load
+        toggleNpcCharacterSelector();
+    }
     
     if (editor) {
         // Ctrl+Enter to send

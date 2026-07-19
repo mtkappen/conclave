@@ -386,6 +386,10 @@ class ChatMessage(models.Model):
     # Store sender's name at time of creation for archival purposes
     sender_username = models.CharField(max_length=150, blank=True, help_text="Username at time of posting (preserved after user deletion)")
     sender_real_name = models.CharField(max_length=100, blank=True, help_text="Real name at time of posting (preserved after user deletion)")
+    
+    # For NPC chat: track which character the DM is posting as
+    npc_character_id = models.IntegerField(null=True, blank=True, help_text="CharacterSheet ID when DM posts as an NPC")
+    npc_character_name = models.CharField(max_length=100, blank=True, help_text="NPC name at time of posting")
 
     def __str__(self):
         return f"{self.get_sender_display_name()}: {self.content[:50]}..."
@@ -410,6 +414,19 @@ class ChatMessage(models.Model):
         super().save(*args, **kwargs)
         if self.created_at:
             self.campaign.update_last_message_date()
+    
+    def get_npc_avatar_url(self):
+        """Get the avatar URL for the NPC character if posting as an NPC."""
+        if not self.npc_character_id:
+            return None
+        try:
+            from .models import CharacterSheet
+            char = CharacterSheet.objects.get(pk=self.npc_character_id)
+            if char.avatar:
+                return char.avatar.url
+        except:
+            pass
+        return None
 
 
 class DiceRollLog(models.Model):

@@ -33,13 +33,13 @@
         <!-- Chat Component - Now the primary focus -->
         {% include 'campaigns/chat_component.html' %}
         
-        <!-- Campaign Characters (Below chat) -->
+        <!-- Player Characters (Below chat) -->
         <div class="card" style="margin-top: 2rem;">
             <h2>📜 Campaign Characters</h2>
             
-            {% if characters %}
+            {% if player_characters %}
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
-                {% for character in characters %}
+                {% for character in player_characters %}
                 <div style="background-color: #2d2d30; padding: 1rem; border-radius: 4px; border: 1px solid #3c3c3c;">
                     {% if character.avatar %}
                     <img src="{{ character.avatar.url }}" alt="{{ character.name }}" 
@@ -64,7 +64,7 @@
                 {% endfor %}
             </div>
             {% else %}
-            <p style="color: #aaa;">No characters yet.</p>
+            <p style="color: #aaa;">No player characters yet.</p>
             {% endif %}
             
             {% if membership.role == 'PLAYER' and not is_admin_viewing %}
@@ -73,6 +73,50 @@
             </a>
             {% endif %}
         </div>
+        
+        <!-- NPC Characters (DM Only) -->
+        {% if membership.role == 'DM' and not is_admin_viewing %}
+        <div class="card" style="margin-top: 2rem; border-color: #9b5de5;">
+            <h2 style="color: #9b5de5;">🎭 NPCs (Your Characters)</h2>
+            
+            {% if npcs %}
+            <!-- NPCs exist -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+                {% for npc in npcs %}
+                <div style="background-color: #2d2d30; padding: 1rem; border-radius: 4px; border: 1px solid #9b5de5;">
+                    {% if npc.avatar %}
+                    <img src="{{ npc.avatar.url }}" alt="{{ npc.name }}" 
+                         style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 0.5rem;">
+                    {% endif %}
+                    
+                    <h4 style="color: #d7ba7d; font-size: 0.95rem;">{{ npc.name }}</h4>
+                    <p style="font-size: 0.8rem; color: #d4d4d4;">
+                        {{ npc.class_name|default:'NPC' }} - Level {{ npc.level }}
+                    </p>
+                    
+                    <div style="margin-top: 0.5rem;">
+                        <a href="{% url 'campaigns:character_detail' npc.pk %}" 
+                           style="color: #3794ff; font-size: 0.8rem; text-decoration: none; display: inline-block; margin-right: 1rem;">
+                            View Sheet →
+                        </a>
+                        <a href="{% url 'campaigns:edit_character' npc.pk %}" 
+                           style="color: #ce9178; font-size: 0.8rem; text-decoration: none; display: inline-block;">
+                            Edit →
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- No NPCs yet -->
+            <p style="color: #aaa; margin-bottom: 1.5rem;">No NPCs created yet.</p>
+            {% endif %}
+            
+            <a href="{% url 'campaigns:create_character' campaign.pk %}" class="btn btn-secondary" style="margin-top: 0;">
+                + Create NPC
+            </a>
+        </div>
+        {% endif %}
     </div>
     
         <!-- Right Column: Dice Roller + Sidebar Info - Fixed width -->

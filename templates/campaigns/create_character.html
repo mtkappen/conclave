@@ -10,6 +10,14 @@
         <h2 style="font-size: 1.6rem;">🎭 {% if character %}Edit Character: {{ character.name }}{% else %}Create New Character{% endif %}</h2>
         <p style="color: #aaa; margin-bottom: 1.25rem; font-size: 0.95rem;">Campaign: {{ campaign.title }}</p>
         
+        {% if membership.role == 'DM' and not character %}
+        <div style="background-color: #1a2d4e; border-left: 3px solid #9b5de5; padding: 1rem; margin-bottom: 1.5rem; border-radius: 4px;">
+            <p style="color: #d4d4d4; font-size: 0.9rem; margin: 0;">
+                💡 <strong>Tip:</strong> Characters you create here will be your NPCs. They'll appear in a separate "NPCs" section on the campaign page, visible only to you. Players cannot see NPC character sheets.
+            </p>
+        </div>
+        {% endif %}
+        
         {% if game_settings %}
         <div style="background-color: #0f3460; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
             <span style="color: #aaa; font-size: 0.9rem;">Game System: </span>
