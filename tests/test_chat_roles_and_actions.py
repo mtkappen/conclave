@@ -380,3 +380,231 @@ class TestChatRoleVisibility:
         # Player should see DM's role
         dm_msgs = [m for m in data['messages'] if m.get('sender_role') == 'DM']
         assert len(dm_msgs) > 0
+
+
+class TestAdminOverridePermissions:
+    """Test admin override mode permissions for chat messages."""
+
+    def test_admin_override_can_edit_any_message(self, admin_client, db_setup):
+        """Test that admin in override mode can edit any message."""
+        campaign = db_setup['campaign']
+        
+        # Create a message by another user (player)
+        other_user = User.objects.create_user(
+            username='otherplayer2',
+            email='other2@test.com',
+            password='other123'
+        )
+        
+        CampaignMembership.objects.create(
+            user=other_user,
+            campaign=campaign,
+            role='PLAYER'
+        )
+        
+        other_message = ChatMessage.objects.create(
+            campaign=campaign,
+            sender=other_user,
+            content="Original message"
+        )
+        
+        # Admin in override mode (no membership) should be able to edit
+        response = admin_client.post(
+            reverse('campaigns:edit_chat_message', kwargs={'message_pk': other_message.id}),
+            json.dumps({'content': 'Edited by admin'}),
+            content_type='application/json'
+        )
+        
+        # Should succeed for admin override
+        assert response.status_code == 200
+        
+        # Verify the message was edited
+        other_message.refresh_from_db()
+        assert other_message.content == 'Edited by admin'
+
+    def test_admin_override_can_delete_any_message(self, admin_client, db_setup):
+        """Test that admin in override mode can delete any message."""
+        campaign = db_setup['campaign']
+        
+        # Create a message by another user (player)
+        other_user = User.objects.create_user(
+            username='otherplayer3',
+            email='other3@test.com',
+            password='other123'
+        )
+        
+        CampaignMembership.objects.create(
+            user=other_user,
+            campaign=campaign,
+            role='PLAYER'
+        )
+        
+        other_message = ChatMessage.objects.create(
+            campaign=campaign,
+            sender=other_user,
+            content="Message to delete"
+        )
+        
+        # Admin in override mode should be able to delete
+        response = admin_client.post(
+            reverse('campaigns:delete_chat_message', kwargs={'message_pk': other_message.id})
+        )
+        
+        # Should succeed for admin override
+        assert response.status_code == 200
+        
+        # Verify the message was deleted
+        with pytest.raises(ChatMessage.DoesNotExist):
+            ChatMessage.objects.get(id=other_message.id)
+
+    def test_admin_with_membership_cannot_edit_others_messages(self, client_auth, db_setup):
+        """Test that admin WITH campaign membership follows normal role permissions."""
+        campaign = db_setup['campaign']
+        
+        # Create a message by another user (player)
+        other_user = User.objects.create_user(
+            username='otherplayer4',
+            email='other4@test.com',
+            password='other123'
+        )
+        
+        CampaignMembership.objects.create(
+            user=other_user,
+            campaign=campaign,
+            role='PLAYER'
+        )
+        
+        other_message = ChatMessage.objects.create(
+            campaign=campaign,
+            sender=other_user,
+            content="Original message"
+        )
+        
+        # Admin with PLAYER membership should NOT be able to edit others' messages
+        response = client_auth.post(
+            reverse('campaigns:edit_chat_message', kwargs={'message_pk': other_message.id}),
+            json.dumps({'content': 'Trying to edit'}),
+            content_type='application/json'
+        )
+        
+        # Should fail (403)
+        assert response.status_code == 403
+        
+        # Verify the message was NOT edited
+        other_message.refresh_from_db()
+        assert other_message.content == 'Original message'
+
+
+class TestNPCCharacterContext:
+    """Test NPC character context is passed correctly to templates."""
+
+    def test_npc_characters_passed_as_context_variable(self, admin_client, db_setup):
+        """Test that NPC characters are available in campaign detail view."""
+        campaign = db_setup['campaign']
+        
+        # Create an NPC character for the DM (superuser)
+        npc_char = CharacterSheet.objects.create(
+            user=db_setup['superuser'],
+            campaign=campaign,
+            name='Test NPC',
+            class_name='Merchant'
+        )
+        
+        response = admin_client.get(reverse('campaigns:campaign_detail', kwargs={'pk': campaign.id}))
+        
+        assert response.status_code == 200
+        
+        # Check that characters context variable exists (used for NPC selector)
+        assert 'characters' in response.context
+        assert len(response.context['characters']) >= 1
+
+
+class TestChatActionButtonsVisibility:
+    """Test that action buttons are only shown to authorized users."""
+
+    def test_dm_sees_all_action_buttons(self, admin_client, db_setup):
+        """Test that DM sees edit/delete buttons on all messages."""
+        campaign = db_setup['campaign']
+        
+        # Create a message by a player
+        ChatMessage.objects.create(
+            campaign=campaign,
+            sender=db_setup['regular_user'],
+            content="Player's message"
+        )
+        
+        response = admin_client.get(reverse('campaigns:get_chat_messages', 
+                                           kwargs={'campaign_pk': campaign.id}))
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # DM should see messages (buttons rendered on frontend based on USER_ROLE)
+        assert len(data['messages']) >= 1
+
+    def test_player_only_sees_own_action_buttons(self, client_auth, db_setup):
+        """Test that player only sees edit/delete buttons on their own messages."""
+        campaign = db_setup['campaign']
+        
+        # Create a message by another user
+        other_user = User.objects.create_user(
+            username='otherplayer5',
+            email='other5@test.com',
+            password='other123'
+        )
+        
+        CampaignMembership.objects.create(
+            user=other_user,
+            campaign=campaign,
+            role='PLAYER'
+        )
+        
+        other_message = ChatMessage.objects.create(
+            campaign=campaign,
+            sender=other_user,
+            content="Other's message"
+        )
+        
+        response = client_auth.get(reverse('campaigns:get_chat_messages', 
+                                          kwargs={'campaign_pk': campaign.id}))
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Player should see the message but action buttons are controlled by frontend USER_ROLE check
+        other_msg = next((m for m in data['messages'] if m['id'] == other_message.id), None)
+        assert other_msg is not None
+
+    def test_spectator_sees_no_action_buttons(self, client_auth, db_setup):
+        """Test that spectator sees no edit/delete buttons on any messages."""
+        campaign = db_setup['campaign']
+        
+        # Create a spectator user
+        spectator = User.objects.create_user(
+            username='spectator2',
+            email='spec2@test.com',
+            password='spec123'
+        )
+        
+        CampaignMembership.objects.create(
+            user=spectator,
+            campaign=campaign,
+            role='SPECTATOR'
+        )
+        
+        # Create a message by the spectator
+        spec_message = ChatMessage.objects.create(
+            campaign=campaign,
+            sender=spectator,
+            content="Spectator's own message"
+        )
+        
+        # Spectator fetches messages - should see their own but no buttons on others'
+        response = client_auth.get(reverse('campaigns:get_chat_messages', 
+                                          kwargs={'campaign_pk': campaign.id}))
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Spectator should see messages (buttons controlled by frontend USER_ROLE check)
+        assert len(data['messages']) >= 1

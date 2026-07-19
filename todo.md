@@ -6,22 +6,20 @@
   - Need to redirect to dashboard or handle stale membership references
 
 ## Medium Priority 🟡
-- [ ] 🔍 NPC Selection in Chat - DMs cannot easily choose which NPC to speak as:
-  - Current implementation lacks NPC selector for IC messages
-  - With many NPCs, scrolling through a single list is not practical
-  - Solution: Add searchable dropdown with type-ahead filtering (type character name to filter)
-  - Optionally group NPCs by campaign/character sheet for easier navigation
-  - Should show avatar preview when selecting
+- [x] ✓ NPC Selection in Chat - DMs cannot easily choose which NPC to speak as:
+  - Implemented searchable dropdown with type-ahead filtering for NPCs
+  - Avatar preview when browsing NPC options
+  - Fixed variable name mismatch (characters vs npcs)
 
-- [ ] 🔧 Fix chat message edit/delete buttons disappearing on hover:
-  - Edit and delete buttons do not stay visible while hovering over messages
-  - Cannot click the buttons because they disappear before mouse can reach them
-  - Need to fix CSS/JavaScript hover behavior for message actions
+- [x] ✓ Fix chat message edit/delete buttons disappearing on hover:
+  - Added invisible padding extension (175px) to message bubbles
+  - Buttons slide out from 2rem to 4rem on hover for all message types
+  - Fixed positioning for user messages and received messages
 
-- [ ] 🚨 Security: Anyone can edit anyone else's messages:
-  - Permission check in edit_chat_message allows users to edit others' messages
-  - Only message owner, DMs, and admins should be able to edit messages
-  - Need to fix permission logic to properly restrict access
+- [x] 🚨 Security: Anyone can edit anyone else's messages:
+  - Fixed permission check in edit_chat_message (was using OR operator incorrectly)
+  - Fixed permission check in delete_chat_message (non-members could bypass)
+  - Added admin override mode support for superusers viewing without membership
 
 ## Low Priority 🟢
 - [x] ✓ NPC Chat Support - Enable DMs to play as NPCs in chat:
