@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
-    <title>{% block title %}D&D Tabletop{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💠</text></svg>">
+    <title>{% block title %}Conclave{% endblock %}</title>
     <style>
         * {
             margin: 0;
@@ -282,11 +282,11 @@
     <nav class="navbar">
         {% if user.is_authenticated %}
         <a href="{% url 'campaigns:dashboard' %}" class="navbar-brand">
-            🎲 D&D Tabletop
+            💠 Conclave
         </a>
         {% else %}
         <a href="{% url 'campaigns:login' %}" class="navbar-brand">
-            📋 TaskFlow
+            💠 Conclave
         </a>
         {% endif %}
                 {% if user.is_authenticated %}
@@ -309,10 +309,10 @@
                     </span>
                 </button>
                                 <div class="user-dropdown" id="userDropdown">
-                    <a href="{% url 'campaigns:user_settings' %}"><span style="color: #007acc;">⚙️</span> Settings</a>
-                    <a href="{% url 'campaigns:voluntary_change_password' %}"><span style="color: #9b5de5;">🔐</span> Change Password</a>
+                    <a href="{% url 'campaigns:user_settings' %}"><span style="color: #007acc;">⚙</span> Settings</a>
+                    <a href="{% url 'campaigns:voluntary_change_password' %}"><span style="color: #9b5de5;">🔒</span> Change Password</a>
                     <div class="divider"></div>
-                    <a href="{% url 'campaigns:logout' %}"><span style="color: #f15bb5;">🚪</span> Logout</a>
+                    <a href="{% url 'campaigns:logout' %}"><span style="color: #f15bb5;">⎕</span> Logout</a>
                 </div>
             </li>
         </ul>

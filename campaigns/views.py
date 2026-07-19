@@ -427,16 +427,23 @@ def campaign_detail(request, pk):
             is_temporary = True  # Flag to indicate this is admin viewing mode
         membership = TempMembership()
     
-    # IMPORTANT: Only set admin override if explicitly requested via URL parameter
-    # If admin is a regular member of the campaign, they should see normal visibility
+    # IMPORTANT: Only set admin override if explicitly requested via URL parameter AND admin has no membership
+    # If admin is a regular member of the campaign, they should see normal visibility based on their role
     # This fixes the bug where admins could see all secrets in normal campaign mode
-    if is_admin_override:
+    is_temporary = getattr(membership, 'is_temporary', False)
+    
+    if is_admin_override and not is_temporary:
+        # Admin explicitly requested override AND doesn't have a real membership
         is_admin_viewing = True
         # Set session flag so AJAX calls know this is an admin override view
         request.session['admin_campaign_view'] = True
+    elif request.user.is_superuser and membership and not is_temporary:
+        # Admin is a regular member - clear any admin viewing flags
+        is_admin_viewing = False
+        if 'admin_campaign_view' in request.session:
+            del request.session['admin_campaign_view']
     else:
         # Clear the session flag when NOT in admin override mode
-        # This ensures admins see normal role-based visibility when accessing normally
         if 'admin_campaign_view' in request.session:
             del request.session['admin_campaign_view']
     
@@ -795,10 +802,17 @@ def get_chat_messages(request, campaign_pk):
                 is_temporary = True  # Flag to indicate this is admin viewing mode
             membership = TempMembership()
         
-        # If admin override is active (explicitly set via URL parameter), allow seeing all messages
-        # Otherwise, admins who are members should only see what their role allows
-        if is_admin_override:
+        # IMPORTANT: Only admins WITHOUT membership can see all secrets (admin override mode)
+        # Admins who ARE members of the campaign should only see what their role allows
+        # This fixes the security bug where admins could see DM whispers and hidden dice rolls in normal mode
+        is_temporary = getattr(membership, 'is_temporary', False)
+        
+        if is_admin_override and not is_temporary:
+            # Admin explicitly requested override AND doesn't have a real membership
             is_admin_viewing = True
+        elif request.user.is_superuser and membership and not is_temporary:
+            # Admin is a regular member - treat them as their assigned role, NOT as admin viewing
+            is_admin_viewing = False
 
         # Get user's current party group if in split mode
         user_group = None
@@ -819,14 +833,27 @@ def get_chat_messages(request, campaign_pk):
         
         user_role = membership.role if membership else None
         
-        if user_role == 'DM':
-            # DMs see everything in their campaign
-            visible_messages = visible_messages.order_by('created_at')
+        if user_role == 'DM' and not is_admin_viewing:
+            # DMs see almost everything, but NOT secret whispers not meant for them
+            # They can see: PUBLIC, their own messages, DM_ONLY (as sender or receiver), SECRET_WHISPER where they're recipient
+            base_query = Q(visibility_type='PUBLIC') | Q(sender=request.user)
+            
+            # DMs can see all DM_ONLY messages (they are the recipient)
+            base_query |= Q(visibility_type='DM_ONLY')
+            
+            # DMs can only see SECRET_WHISPER where they are a recipient
+            base_query |= Q(visibility_type='SECRET_WHISPER', recipients=request.user)
+            
+            # Add SPLIT_GROUP condition if applicable
+            if user_group:
+                base_query |= Q(visibility_type='SPLIT_GROUP', party_group=user_group)
+            
+            visible_messages = visible_messages.filter(base_query).order_by('created_at')
         elif request.user.is_superuser and is_admin_viewing:
-            # Superuser viewing without membership - can see everything (admin mode)
+            # Superuser viewing without membership (admin override mode) - can see everything
             visible_messages = visible_messages.order_by('created_at')
         else:
-            # Players and Spectators have restrictions
+            # Players, Spectators, and DMs in admin override mode have restrictions
             # They can see:
             # 1. PUBLIC messages (everyone)
             # 2. Their own messages regardless of visibility type  
@@ -836,7 +863,7 @@ def get_chat_messages(request, campaign_pk):
             
             base_query = Q(visibility_type='PUBLIC') | Q(sender=request.user)
             
-            # Add DM_ONLY conditions (sender can see their own DM whispers)
+            # Add DM_ONLY conditions (sender can see their own DM whispers, or if they're the DM receiving them)
             # Note: Old single-recipient field removed, so we only check sender
             base_query |= Q(visibility_type='DM_ONLY', sender=request.user)
             
@@ -881,17 +908,28 @@ def get_chat_messages(request, campaign_pk):
                     pass
             
             # Check if this is a whisper to the current user (DM_ONLY or SECRET_WHISPER)
+            # IMPORTANT: "whisper-to-me" styling should only apply when someone ELSE sent a whisper TO you
+            # If YOU sent the whisper, it should show with normal styling (not cyan highlight)
             is_dm_whisper_to_me = False
             if msg.visibility_type == 'DM_ONLY':
                 # DM_ONLY messages are visible to sender and the campaign DM
                 # For backwards compatibility, we can't check recipient field anymore
-                is_dm_whisper_to_me = (msg.sender == request.user)  # Sender always sees their own
+                # Only mark as "whisper-to-me" if someone else sent it TO you (as the DM)
+                is_dm_whisper_to_me = (msg.sender != request.user)  # Not the sender means you're receiving it
             elif msg.visibility_type == 'SECRET_WHISPER':
-                is_dm_whisper_to_me = msg.recipients.filter(id=request.user.id).exists()
+                # SECRET_WHISPER: Only mark as "whisper-to-me" if someone else sent it TO you
+                # If you sent it, don't highlight it (you already know what you sent)
+                is_dm_whisper_to_me = (msg.sender != request.user) and msg.recipients.filter(id=request.user.id).exists()
             
             # Get the sender's role for badge display
             sender_membership = CampaignMembership.objects.filter(user=msg.sender, campaign=campaign).first() if msg.sender else None
             sender_role = sender_membership.role if sender_membership else None
+            
+            # Get recipient list for whispers (for display to sender and recipients)
+            recipient_names = []
+            if msg.visibility_type == 'SECRET_WHISPER':
+                for recipient in msg.recipients.all():
+                    recipient_names.append(recipient.real_name or recipient.username)
             
             message_list.append({
                 'id': msg.id,
@@ -909,6 +947,7 @@ def get_chat_messages(request, campaign_pk):
                 'is_dm_whisper_to_me': is_dm_whisper_to_me,
                 'sender_avatar': sender_avatar,
                 'character_avatar': character_avatar,
+                'recipient_names': recipient_names,
             })
 
         dice_list = []

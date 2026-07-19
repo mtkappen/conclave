@@ -296,6 +296,30 @@
     background-color: #1a2d4e;
 }
 
+/* Sender's own secret whispers should stay purple, not turn blue */
+.message-bubble.secret-whisper.user-message {
+    background-color: #2d004e !important;
+    border-left: 3px solid #ff00ff !important;
+    border-right: none !important;
+}
+
+.message-bubble.secret-whisper.user-message .sender-name,
+.message-bubble.secret-whisper.user-message .message-content {
+    color: #ff00ff !important;
+}
+
+/* Sender's DM whispers should stay purple/blue theme */
+.message-bubble.dm-only.user-message {
+    background-color: #2d1b4e !important;
+    border-left: 3px solid #9b5de5 !important;
+    border-right: none !important;
+}
+
+.message-bubble.dm-only.user-message .sender-name,
+.message-bubble.dm-only.user-message .message-content {
+    color: #9b5de5 !important;
+}
+
 .message-bubble.split-group {
     border-left: 3px solid #00bbf9;
     background-color: #1a2d4e;
@@ -940,6 +964,8 @@ function renderMessages(messages) {
                         ${senderRole && !(msg.message_type === 'IC' && msg.character_name) ? `<span class="role-badge role-${senderRole.toLowerCase()}">${escapeHtml(senderRole)}</span>` : ''}
                         ${msg.visibility_type === 'SECRET_WHISPER' && isWhisperToMe ? '<span class="whisper-badge" style="background-color: #ff00ff; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">Secret Whisper</span>' : ''}
                         ${msg.visibility_type === 'DM_ONLY' && isWhisperToMe ? '<span class="whisper-badge" style="background-color: #00bbf9; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">DM Whisper</span>' : ''}
+                        ${msg.visibility_type === 'SECRET_WHISPER' && msg.recipient_names && msg.recipient_names.length > 0 ? '<span class="recipient-badge" style="color: #ff00ff; font-size: 0.75rem; margin-left: 0.5rem; font-style: italic;">→ ' + msg.recipient_names.map(n => escapeHtml(n)).join(', ') + '</span>' : ''}
+                        ${msg.visibility_type === 'DM_ONLY' ? '<span class="recipient-badge" style="color: #00bbf9; font-size: 0.75rem; margin-left: 0.5rem; font-style: italic;">→ DM</span>' : ''}
                         ${msg.is_edited ? '<span class="edited-indicator">(Edited)</span>' : ''}
                     </span>
                     <div class="message-actions">
