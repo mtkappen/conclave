@@ -256,6 +256,7 @@
     position: relative;
     max-width: fit-content;
     width: fit-content;
+    overflow: visible !important;
 }
 
 .message-bubble.public {
@@ -351,11 +352,6 @@
     color: rgba(255, 255, 255, 0.7);
 }
 
-.message-bubble.user-message .message-actions {
-    right: auto;
-    left: 0.5rem;
-}
-
 .message-bubble.user-message .action-btn {
     background-color: rgba(255, 255, 255, 0.2);
     color: white;
@@ -383,6 +379,8 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
+    position: relative;
+    min-height: 1.8rem;
 }
 
 .sender-name {
@@ -390,13 +388,28 @@
     color: #007acc;
 }
 
-.spectator-badge {
-    background-color: #f15bb5;
-    color: white;
+.role-badge {
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     font-size: 0.75rem;
     margin-left: 0.5rem;
+    color: white;
+}
+
+.role-badge.role-dm {
+    background-color: #9b5de5;
+}
+
+.role-badge.role-player {
+    background-color: #007acc;
+}
+
+.role-badge.role-spectator {
+    background-color: #f15bb5;
+}
+
+.role-badge.role-npc {
+    background-color: #00d9a5;
 }
 
 .message-time {
@@ -478,16 +491,43 @@
     margin-left: 0.5rem;
 }
 
+.message-header {
+    position: relative;
+    overflow: visible !important;
+}
+
+.message-header {
+    position: relative;
+    overflow: visible !important;
+}
+
 .message-actions {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    display: none;
-    gap: 0.5rem;
+    top: 0.3rem;
+    left: calc(100% + 2rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
 }
 
 .message-bubble:hover .message-actions {
-    display: flex;
+    left: calc(100% + 1rem);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* User's own messages - buttons on left side */
+.message-bubble.user-message .message-actions {
+    left: auto;
+    right: calc(100% + 2rem);
+}
+
+.message-bubble.user-message:hover .message-actions {
+    right: calc(100% + 1rem);
 }
 
 .action-btn {
@@ -850,7 +890,7 @@ function renderMessages(messages) {
                 let visibilityClass = msg.visibility_type.toLowerCase().replace('_', '-');
         const isDMOnly = msg.visibility_type === 'DM_ONLY';
         const isSecretWhisper = msg.visibility_type === 'SECRET_WHISPER';
-        const isSpectator = msg.is_spectator || false;
+        const senderRole = msg.sender_role || null;
         
         // Check if this is a whisper to the current user (DM_ONLY or SECRET_WHISPER)
         const isWhisperToMe = msg.is_dm_whisper_to_me || false;
@@ -878,7 +918,7 @@ function renderMessages(messages) {
             bubbleClass = 'dice-roll';
         }
         
-        const DEFAULT_AVATAR = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="50" fill="%23666"/%3E%3Ctext x="50" y="65" font-family="Arial" font-size="40" text-anchor="middle" fill="white"%3E?%3C/text%3E%3C/svg%3E';
+        const DEFAULT_AVATAR = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23666'/%3E%3Ctext x='50' y='65' font-family='Arial' font-size='40' text-anchor='middle' fill='white'%3E?%3C/text%3E%3C/svg%3E";
         const avatarUrl = msg.sender_avatar || DEFAULT_AVATAR;
         const charAvatarUrl = msg.character_avatar || null;
         
@@ -889,15 +929,18 @@ function renderMessages(messages) {
                     <span>
                         ${charAvatarUrl && msg.message_type === 'IC' ? `<img src="${escapeHtml(charAvatarUrl)}" alt="" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 0.5rem; vertical-align: middle;">` : ''}
                         ${!charAvatarUrl || msg.message_type !== 'IC' ? `<img src="${escapeHtml(avatarUrl)}" alt="" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 0.5rem; vertical-align: middle;">` : ''}
-                        <span class="sender-name">${msg.message_type === 'IC' && msg.character_name ? escapeHtml(msg.character_name) : escapeHtml(msg.sender_name)}</span>
-                        ${isSpectator ? '<span class="spectator-badge">Spectator</span>' : ''}
+                        <span class="sender-name">
+                            ${msg.message_type === 'IC' && msg.character_name ? escapeHtml(msg.character_name) : escapeHtml(msg.sender_name)}
+                        </span>
+                        ${msg.message_type === 'IC' && msg.character_name ? (senderRole === 'DM' ? `<span title="NPC" style="background-color: #00d9a5; color: white; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.7rem; margin-left: 0.5rem; font-weight: bold;">NPC</span>` : `<span title="Character" style="background-color: #9b5de5; color: white; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.7rem; margin-left: 0.5rem; font-weight: bold;">CHARACTER</span>`) : ''}
+                        ${senderRole && !(msg.message_type === 'IC' && msg.character_name) ? `<span class="role-badge role-${senderRole.toLowerCase()}">${escapeHtml(senderRole)}</span>` : ''}
                         ${msg.visibility_type === 'SECRET_WHISPER' && isWhisperToMe ? '<span class="whisper-badge" style="background-color: #ff00ff; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">Secret Whisper</span>' : ''}
                         ${msg.visibility_type === 'DM_ONLY' && isWhisperToMe ? '<span class="whisper-badge" style="background-color: #00bbf9; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">DM Whisper</span>' : ''}
                         ${msg.is_edited ? '<span class="edited-indicator">(Edited)</span>' : ''}
                     </span>
                     <div class="message-actions">
-                        <button class="action-btn" onclick="editMessage(${msg.id})">✏️ Edit</button>
-                        <button class="action-btn" onclick="deleteMessage(${msg.id})">🗑️ Delete</button>
+                        <button class="action-btn" onclick="editMessage(${msg.id})" title="Edit">✏️</button>
+                        <button class="action-btn" onclick="deleteMessage(${msg.id})" title="Delete">🗑️</button>
                     </div>
                 </div>` : ''}
                 <div class="message-content message-html">${msg.content}</div>

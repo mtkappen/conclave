@@ -890,6 +890,10 @@ def get_chat_messages(request, campaign_pk):
             elif msg.visibility_type == 'SECRET_WHISPER':
                 is_dm_whisper_to_me = msg.recipients.filter(id=request.user.id).exists()
             
+            # Get the sender's role for badge display
+            sender_membership = CampaignMembership.objects.filter(user=msg.sender, campaign=campaign).first() if msg.sender else None
+            sender_role = sender_membership.role if sender_membership else None
+            
             message_list.append({
                 'id': msg.id,
                 'content': msg.content,
@@ -902,7 +906,7 @@ def get_chat_messages(request, campaign_pk):
                 'is_edited': msg.is_edited,
                 'created_at': msg.created_at.strftime('%Y-%m-%d %H:%M:%S'),
                 'formatted_time': msg.created_at.strftime('%b %d, %H:%M'),
-                'is_spectator': membership.role == 'SPECTATOR' if membership else False,
+                'sender_role': sender_role,
                 'is_dm_whisper_to_me': is_dm_whisper_to_me,
                 'sender_avatar': sender_avatar,
                 'character_avatar': character_avatar,
