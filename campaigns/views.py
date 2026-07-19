@@ -10,7 +10,7 @@ import json
 import re
 
 from .models import User, Campaign, CampaignMembership, Character, InventoryItem, ChatMessage, DiceRollLog, PartyGroup, PartyGroupMember, PersonalNotebook, CampaignRuleBook
-from .forms import AdminUserCreationForm, CustomAuthenticationForm, CampaignForm, CharacterForm, InventoryItemForm, PasswordChangeForm, UserPasswordChangeForm, FirstTimeAdminSetupForm, DatabaseResetForm
+from .forms import AdminUserCreationForm, CustomAuthenticationForm, CampaignForm, CharacterForm, InventoryItemForm, PasswordChangeForm, UserPasswordChangeForm, FirstTimeAdminSetupForm, DatabaseResetForm, UserSettingsForm
 
 
 def first_time_admin_setup(request):
@@ -102,6 +102,34 @@ def voluntary_change_password(request):
         form = UserPasswordChangeForm(user=request.user)
     
     return render(request, 'registration/voluntary_change_password.html', {'form': form})
+
+
+@login_required
+def user_settings(request):
+    """Allow users to edit their profile settings (real name, avatar, password)."""
+    if request.method == 'POST':
+        settings_form = UserSettingsForm(request.POST, request.FILES, instance=request.user)
+        
+        if settings_form.is_valid():
+            settings_form.save()
+            messages.success(request, 'Your profile has been updated successfully.')
+            return redirect('campaigns:dashboard')
+    else:
+        settings_form = UserSettingsForm(instance=request.user)
+    
+    # Calculate user statistics
+    campaign_count = CampaignMembership.objects.filter(user=request.user).count()
+    message_count = ChatMessage.objects.filter(sender=request.user).count()
+    character_count = Character.objects.filter(user=request.user).count()
+    dice_roll_count = DiceRollLog.objects.filter(sender=request.user).count()
+    
+    return render(request, 'registration/user_settings.html', {
+        'settings_form': settings_form,
+        'campaign_count': campaign_count,
+        'message_count': message_count,
+        'character_count': character_count,
+        'dice_roll_count': dice_roll_count,
+    })
 
 
 @login_required
@@ -734,13 +762,21 @@ def get_chat_messages(request, campaign_pk):
             sender_name = msg.get_sender_display_name()
             sender_id = msg.sender.id if msg.sender else None
             
+            # Get sender's avatar
+            sender_avatar = None
+            if msg.sender and msg.sender.avatar:
+                sender_avatar = msg.sender.avatar.url
+            
             # Determine display name based on message type (only for current user's messages)
             display_sender_name = sender_name
+            character_avatar = None
             if msg.message_type == 'IC' and membership and membership.role == 'PLAYER' and msg.sender == request.user:
                 # Show character name for IC messages
                 try:
                     char = Character.objects.get(user=request.user, campaign=campaign)
                     display_sender_name = char.name
+                    if char.avatar:
+                        character_avatar = char.avatar.url
                 except Character.DoesNotExist:
                     pass
             
@@ -766,6 +802,8 @@ def get_chat_messages(request, campaign_pk):
                 'formatted_time': msg.created_at.strftime('%b %d, %H:%M'),
                 'is_spectator': membership.role == 'SPECTATOR' if membership else False,
                 'is_dm_whisper_to_me': is_dm_whisper_to_me,
+                'sender_avatar': sender_avatar,
+                'character_avatar': character_avatar,
             })
 
         dice_list = []

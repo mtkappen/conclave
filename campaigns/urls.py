@@ -12,6 +12,7 @@ urlpatterns = [
     path('logout/', views.custom_logout, name='logout'),
     path('change-password/', views.change_password, name='change_password'),
     path('voluntary-change-password/', views.voluntary_change_password, name='voluntary_change_password'),
+    path('settings/', views.user_settings, name='user_settings'),
     
     # Database reset (admin only)
     path('admin/database-reset/', views.database_reset, name='database_reset'),

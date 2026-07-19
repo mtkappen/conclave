@@ -39,6 +39,7 @@
         
         .navbar-nav {
             display: flex;
+            align-items: center;
             list-style: none;
             gap: 0.75rem;
         }
@@ -170,12 +171,18 @@
         .user-menu-toggle {
             background: none;
             border: none;
-            color: #007acc;
+            color: #eee;
             font-size: 0.95rem;
             cursor: pointer;
             padding: 0.4rem 0.8rem;
             border-radius: 4px;
-            transition: background-color 0.3s;
+            transition: all 0.3s;
+        }
+        
+        .user-menu-toggle span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         
         .user-menu-toggle:hover {
@@ -189,41 +196,51 @@
             background-color: #252526;
             border: 1px solid #3c3c3c;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
-            min-width: 200px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            min-width: 220px;
             z-index: 1000;
             display: none;
-            margin-top: 0.4rem;
+            margin-top: 0.5rem;
+            overflow: hidden;
         }
         
         .user-dropdown.active {
             display: block;
+            animation: dropdownFade 0.2s ease-out;
+        }
+        
+        @keyframes dropdownFade {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .user-dropdown a,
         .user-dropdown button {
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
             width: 100%;
-            padding: 0.65rem 1rem;
-            color: #eee;
+            padding: 0.75rem 1rem;
+            color: #d4d4d4;
             text-decoration: none;
             background: none;
             border: none;
             text-align: left;
             cursor: pointer;
             font-size: 0.9rem;
-            transition: background-color 0.3s;
+            transition: all 0.2s;
         }
         
         .user-dropdown a:hover,
         .user-dropdown button:hover {
             background-color: #2a2d2e;
+            color: #fff;
         }
         
         .user-dropdown .divider {
             height: 1px;
             background-color: #3c3c3c;
-            margin: 0.4rem 0;
+            margin: 0.5rem 0;
         }
         
         /* Responsive design - Mobile-first with desktop optimizations */
@@ -282,12 +299,20 @@
             <li><a href="{% url 'campaigns:create_campaign' %}">New Campaign</a></li>
             <li class="user-menu-container">
                 <button type="button" class="user-menu-toggle" id="userMenuToggle">
-                    {{ user.real_name|default:user.username }} ▼
+                    <span>
+                        {% if user.avatar %}
+                        <img src="{{ user.avatar.url }}" alt="" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                        {% else %}
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #007acc; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;">{{ user.username|first|upper }}</div>
+                        {% endif %}
+                        {{ user.real_name|default:user.username }}
+                    </span>
                 </button>
                                 <div class="user-dropdown" id="userDropdown">
-                    <a href="{% url 'campaigns:voluntary_change_password' %}">🔐 Change Password</a>
+                    <a href="{% url 'campaigns:user_settings' %}"><span style="color: #007acc;">⚙️</span> Settings</a>
+                    <a href="{% url 'campaigns:voluntary_change_password' %}"><span style="color: #9b5de5;">🔐</span> Change Password</a>
                     <div class="divider"></div>
-                    <a href="{% url 'campaigns:logout' %}">🚪 Logout</a>
+                    <a href="{% url 'campaigns:logout' %}"><span style="color: #f15bb5;">🚪</span> Logout</a>
                 </div>
             </li>
         </ul>

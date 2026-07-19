@@ -3,6 +3,17 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from .models import User, Campaign, Character, InventoryItem
 
 
+class UserSettingsForm(forms.ModelForm):
+    """Form for users to edit their profile settings."""
+    class Meta:
+        model = User
+        fields = ['real_name', 'avatar']
+        widgets = {
+            'real_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
+            'avatar': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+
 class UserRegistrationForm(UserCreationForm):
     """Form for user registration."""
     real_name = forms.CharField(

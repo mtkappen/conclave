@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}User Settings - D&D Tabletop{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 3rem auto;">
+    <div class="card">
+        <h2 style="text-align: center; color: #007acc; margin-bottom: 1.5rem;">⚙️ User Settings</h2>
+        
+        <p style="text-align: center; margin-bottom: 2rem; color: #aaa;">
+            Update your profile information and avatar.
+        </p>
+        
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label for="{{ settings_form.real_name.id_for_label }}">Full Name</label>
+                {{ settings_form.real_name }}
+                {% if settings_form.real_name.errors %}
+                    <small style="color: #e94560; display: block; margin-top: 0.25rem;">{{ settings_form.real_name.errors|join:", " }}</small>
+                {% endif %}
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label for="{{ settings_form.avatar.id_for_label }}">Profile Picture</label>
+                {{ settings_form.avatar }}
+                {% if user.avatar %}
+                    <div style="margin-top: 0.75rem;">
+                        <img src="{{ user.avatar.url }}" alt="Current avatar" style="max-width: 120px; border-radius: 8px; display: block;">
+                    </div>
+                {% endif %}
+                {% if settings_form.avatar.errors %}
+                    <small style="color: #e94560; display: block; margin-top: 0.25rem;">{{ settings_form.avatar.errors|join:", " }}</small>
+                {% endif %}
+            </div>
+            
+            <button type="submit" class="btn" style="width: 100%;">Save Changes</button>
+        </form>
+    </div>
+    
+    <div class="card" style="margin-top: 2rem;">
+        <h3 style="color: #007acc; margin-bottom: 1rem;">📊 Your Statistics</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+            <div style="background-color: #1e1e1e; padding: 1.25rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: #007acc;">{{ campaign_count }}</div>
+                <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.5rem;">Campaigns</div>
+            </div>
+            
+            <div style="background-color: #1e1e1e; padding: 1.25rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: #9b5de5;">{{ message_count }}</div>
+                <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.5rem;">Messages Sent</div>
+            </div>
+            
+            <div style="background-color: #1e1e1e; padding: 1.25rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: #f15bb5;">{{ character_count }}</div>
+                <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.5rem;">Characters</div>
+            </div>
+            
+            <div style="background-color: #1e1e1e; padding: 1.25rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: #00bbf9;">{{ dice_roll_count }}</div>
+                <div style="color: #aaa; font-size: 0.9rem; margin-top: 0.5rem;">Dice Rolls</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 2rem;">
+        <h3 style="color: #007acc; margin-bottom: 1rem;">🔐 Password Settings</h3>
+        <p style="color: #aaa; margin-bottom: 1rem;">
+            Want to change your password? Use the "Change Password" option in the dropdown menu.
+        </p>
+        <a href="{% url 'campaigns:voluntary_change_password' %}" class="btn btn-secondary">Go to Password Settings</a>
+    </div>
+    
+    <div style="text-align: center; margin-top: 1.5rem;">
+        <a href="{% url 'campaigns:dashboard' %}" style="color: #00bbf9; text-decoration: none;">← Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

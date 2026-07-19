@@ -262,6 +262,11 @@
     border-left: 3px solid #858585;
 }
 
+.message-bubble.ic-message {
+    border-left: 3px solid #40E0D0;
+    background-color: #1a3d3a;
+}
+
 .message-bubble.dm-only {
     border-left: 3px solid #9b5de5;
     background-color: #2d1b4e;
@@ -840,6 +845,11 @@ function renderMessages(messages) {
         // Special handling for dice roll messages
         const isDiceRoll = msg.message_type === 'DICE_ROLL';
         
+        // In-Character messages get teal styling
+        if (msg.message_type === 'IC') {
+            visibilityClass = 'ic-message';
+        }
+        
         // Add special class for whispers to me and user's own messages
         let bubbleClass = isWhisperToMe ? `${visibilityClass} whisper-to-me` : visibilityClass;
         if (isUserMessage) {
@@ -851,11 +861,16 @@ function renderMessages(messages) {
             bubbleClass = 'dice-roll';
         }
         
+        const avatarUrl = msg.sender_avatar || '/static/images/default-avatar.png';
+        const charAvatarUrl = msg.character_avatar || null;
+        
         html += `
             <div class="message-bubble ${bubbleClass}" data-id="${msg.id}">
                 ${!isDiceRoll ? `
                 <div class="message-header">
                     <span>
+                        ${charAvatarUrl && msg.message_type === 'IC' ? `<img src="${escapeHtml(charAvatarUrl)}" alt="" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 0.5rem; vertical-align: middle;">` : ''}
+                        ${!charAvatarUrl || msg.message_type !== 'IC' ? `<img src="${escapeHtml(avatarUrl)}" alt="" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 0.5rem; vertical-align: middle;">` : ''}
                         <span class="sender-name">${escapeHtml(msg.sender_name)}</span>
                         ${isSpectator ? '<span class="spectator-badge">Spectator</span>' : ''}
                         ${msg.visibility_type === 'SECRET_WHISPER' && isWhisperToMe ? '<span class="whisper-badge" style="background-color: #ff00ff; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">Secret Whisper</span>' : ''}
