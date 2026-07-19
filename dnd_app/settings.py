@@ -125,9 +125,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # Login/Logout URLs
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
-LOGOUT_REDIRECT_URL = 'login'
+LOGIN_URL = 'campaigns:login'
+LOGIN_REDIRECT_URL = 'campaigns:dashboard'
+LOGOUT_REDIRECT_URL = 'campaigns:login'
 
 # Chat refresh interval (for polling) - 3 seconds
 CHAT_REFRESH_INTERVAL = 3000
@@ -137,6 +137,21 @@ CHAT_REFRESH_INTERVAL = 3000
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# =============================================================================
+# TESTING CONFIGURATION
+# =============================================================================
+
+# Use in-memory database for faster tests when running pytest
+import sys
+if 'pytest' in sys.modules or 'runtests' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
 
 
 

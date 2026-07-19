@@ -1,0 +1,101 @@
+
+{% extends 'base_vscode.html' %}
+
+{% block title %}Dashboard - D&D Tabletop{% endblock %}
+
+{% block sidebar_title %}EXPLORER{% endblock %}
+
+{% block breadcrumb_current %}Dashboard{% endblock %}
+
+{% block tab_title %}Dashboard{% endblock %}
+
+{% block status_context %}Dashboard{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1 style="color: #cccccc; margin-bottom: 0.5rem;">Welcome, {{ user.real_name|default:user.username }}! 🎲</h1>
+    <p class="text-muted">Manage your campaigns and characters from here</p>
+</div>
+
+<div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+    <a href="{% url 'campaigns:create_campaign' %}" class="btn">+ Create New Campaign</a>
+    {% if user.is_superuser %}
+    <a href="{% url 'campaigns:admin_user_list' %}" class="btn btn-secondary">Manage Users</a>
+    {% endif %}
+</div>
+
+{% if memberships %}
+<h2 style="color: #cccccc; margin-bottom: 1rem; font-size: 1.1rem;">Your Campaigns</h2>
+
+<div class="grid-container grid-auto">
+    {% for membership in memberships %}
+    <div class="card" style="cursor: pointer;" onclick="window.location.href='{% url "campaigns:campaign_detail" membership.campaign.pk %}'">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+            <h3 style="color: #e94560; font-size: 1.1rem;">{{ membership.campaign.title }}</h3>
+            <span class="role-badge role-{{ membership.role|lower }}">
+                {{ membership.get_role_display }}
+            </span>
+        </div>
+        
+        {% if membership.campaign.description %}
+        <p style="color: #858585; margin-bottom: 1rem; font-size: 0.85rem;">{{ membership.campaign.description|truncatewords:20 }}</p>
+        {% endif %}
+        
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <a href="{% url "campaigns:campaign_detail" membership.campaign.pk %}" class="btn" style="font-size: 0.8rem;">Enter Campaign</a>
+            
+            {% if membership.role == 'DM' %}
+            <a href="{% url "campaigns:dm_roster" membership.campaign.pk %}" class="btn btn-secondary" style="font-size: 0.75rem;">View Roster</a>
+            {% endif %}
+        </div>
+        
+        <small style="color: #666; display: block; margin-top: 1rem; font-size: 0.75rem;">
+            Joined: {{ membership.joined_at|date:"M d, Y" }}
+        </small>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align: center; padding: 3rem;">
+    <h2 style="color: #e94560; font-size: 1.5rem;">No Campaigns Yet</h2>
+    <p style="margin: 1rem 0; color: #858585;">You haven't joined any campaigns yet.</p>
+    
+    <a href="{% url 'campaigns:create_campaign' %}" class="btn">Create Your First Campaign</a>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top: 2rem;">
+    <h3>Quick Guide 📖</h3>
+    <ul style="list-style-position: inside; line-height: 2; color: #cccccc; font-size: 0.85rem;">
+        <li><strong>Dungeon Master (DM):</strong> Creates campaign, runs the game, views all character sheets, manages members</li>
+        <li><strong>Player:</strong> Creates characters and plays in campaigns</li>
+        <li><strong>Spectator:</strong> Watches and chats without playing</li>
+        <li style="margin-top: 1rem;"><em>Note: System Admin (superuser) can manage users via the Activity Bar but doesn't participate in campaigns by default.</em></li>
+    </ul>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+    <h3>Tips for Getting Started 💡</h3>
+    <ol style="list-style-position: inside; line-height: 2; color: #cccccc; font-size: 0.85rem;">
+        <li>Create a new campaign as a DM or join an existing one</li>
+        <li>As a player, create your character sheet</li>
+        <li>Use the chat feature to communicate with your party</li>
+        <li>Roll dice directly in the campaign interface</li>
+        <li>Check the sidebar for quick access to your campaigns and characters</li>
+    </ol>
+</div>
+{% endblock %}
+
+{% block panel_content %}
+<div style="color: #cccccc; font-size: 0.85rem;">
+    <p><strong>Welcome to D&D Tabletop!</strong></p>
+    <p class="mt-1">Here's what you can do:</p>
+    <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+        <li>Create and manage campaigns</li>
+        <li>Build character sheets</li>
+        <li>Roll dice during gameplay</li>
+        <li>Chat with your party members</li>
+    </ul>
+    <p class="mt-2 text-muted">Tip: Use the Activity Bar on the left to navigate between different sections.</p>
+</div>
+{% endblock %}

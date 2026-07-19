@@ -34,8 +34,12 @@
                     <br><small style="color: #666;">{{ campaign.description|truncatewords:10 }}</small>
                     {% endif %}
                 </td>
-                <td style="padding: 0.75rem; color: #aaa;">
-                    {{ dm_user.real_name|default:dm_user.username|default:"No DM" }}
+                                <td style="padding: 0.75rem; color: #aaa;">
+                    {% if dm_user %}
+                        {{ dm_user.real_name|default:dm_user.username }}
+                    {% else %}
+                        No DM
+                    {% endif %}
                 </td>
                 <td style="padding: 0.75rem; text-align: center;">
                     {{ item.member_count }}

@@ -1,3 +1,8 @@
 Django>=4.2,<5.0
 Pillow>=10.0.0  # For image handling (character avatars, inventory items)
 python-dateutil>=2.8.0  # For date/time utilities
+
+# Testing dependencies
+pytest>=7.0.0
+pytest-django>=4.5.0
+pytest-cov>=4.0.0
