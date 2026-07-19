@@ -18,7 +18,7 @@ class TestCharacterCreation:
         campaign = db_setup['campaign']
         
         response = client_auth.get(reverse('campaigns:create_character', 
-                                          kwargs={'pk': campaign.id}))
+                                          kwargs={'campaign_pk': campaign.id}))
         assert response.status_code == 200
 
     def test_create_character_success(self, client_auth, db_setup):
@@ -26,7 +26,7 @@ class TestCharacterCreation:
         campaign = db_setup['campaign']
         
         response = client_auth.post(reverse('campaigns:create_character', 
-                                           kwargs={'pk': campaign.id}), {
+                                           kwargs={'campaign_pk': campaign.id}), {
             'name': 'New Test Character',
             'class_name': 'Wizard',  # Use class_name instead of class_type
             'level': 1,
@@ -35,11 +35,14 @@ class TestCharacterCreation:
             'constitution': 12,
             'intelligence': 16,
             'wisdom': 13,
-            'charisma': 8
+            'charisma': 8,
+            'health_points': 10,
+            'max_health_points': 10,
+            'armor_class': 10
         })
         
         # Should redirect to character detail or campaign page
-        assert response.status_code in [301, 302]
+        assert response.status_code in [301, 302], f"Expected redirect but got {response.status_code}. Content: {response.content[:500]}"
         
         # Verify character was created
         assert Character.objects.filter(name='New Test Character').exists()
@@ -49,7 +52,7 @@ class TestCharacterCreation:
         campaign = db_setup['campaign']
         
         response = client_auth.post(reverse('campaigns:create_character', 
-                                           kwargs={'pk': campaign.id}), {
+                                           kwargs={'campaign_pk': campaign.id}), {
             'name': '',  # Empty name
             'class_name': 'Fighter',  # Use class_name instead of class_type
             'level': 1
@@ -106,11 +109,14 @@ class TestCharacterEditing:
             'constitution': 14,
             'intelligence': 10,
             'wisdom': 13,
-            'charisma': 15
+            'charisma': 15,
+            'health_points': character.health_points,
+            'max_health_points': character.max_health_points,
+            'armor_class': character.armor_class
         })
         
         # Should redirect after successful update
-        assert response.status_code in [301, 302]
+        assert response.status_code in [301, 302], f"Expected redirect but got {response.status_code}. Content: {response.content[:500]}"
         
         # Verify character was updated
         character.refresh_from_db()
@@ -174,7 +180,7 @@ class TestInventoryManagement:
         """Test that add inventory page is accessible to character owner."""
         character = db_setup['character']
         
-        response = client_auth.get(reverse('campaigns:add_inventory', 
+        response = client_auth.get(reverse('campaigns:add_inventory_item', 
                                           kwargs={'character_pk': character.id}))
         assert response.status_code == 200
 
@@ -182,21 +188,21 @@ class TestInventoryManagement:
         """Test successful inventory item addition."""
         character = db_setup['character']
         
-        response = client_auth.post(reverse('campaigns:add_inventory', 
+        response = client_auth.post(reverse('campaigns:add_inventory_item', 
                                            kwargs={'character_pk': character.id}), {
-            'item_name': 'Longsword',
+            'name': 'Longsword',  # Use 'name' instead of 'item_name' to match form field
             'quantity': 1,
             'weight': 3.0,
             'description': 'A standard longsword'
         })
         
         # Should redirect after adding item
-        assert response.status_code in [301, 302]
+        assert response.status_code in [301, 302], f"Expected redirect but got {response.status_code}. Content: {response.content[:500]}"
         
         # Verify inventory item was created
         character.refresh_from_db()
         assert InventoryItem.objects.filter(character=character, 
-                                           name='Longsword').exists()  # Use 'name' instead of 'item_name'
+                                           name='Longsword').exists()
 
     def test_add_inventory_requires_owner(self, client_auth, db_setup):
         """Test that users can only add inventory to their own characters."""
@@ -215,7 +221,7 @@ class TestInventoryManagement:
             level=1
         )
         
-        response = client_auth.get(reverse('campaigns:add_inventory', 
+        response = client_auth.get(reverse('campaigns:add_inventory_item', 
                                           kwargs={'character_pk': other_character.id}))
         
         # Should redirect or show error
