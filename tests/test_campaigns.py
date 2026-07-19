@@ -95,7 +95,7 @@ class TestCampaignDeletion:
         campaign = db_setup['campaign']
         
         # Regular player should not be able to delete
-        response = client_auth.post(reverse('campaigns:delete_character', 
+        response = client_auth.post(reverse('campaigns:delete_campaign', 
                                            kwargs={'pk': campaign.id}))
         assert response.status_code in [301, 302, 403, 404]
 
@@ -103,7 +103,7 @@ class TestCampaignDeletion:
         """Test that DM can delete their campaign."""
         campaign = db_setup['campaign']
         
-        response = admin_client.post(reverse('campaigns:delete_character', 
+        response = admin_client.post(reverse('campaigns:delete_campaign', 
                                             kwargs={'pk': campaign.id}))
         # Should redirect after deletion
         assert response.status_code in [301, 302]

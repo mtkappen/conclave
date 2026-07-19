@@ -470,7 +470,7 @@ def campaign_detail(request, pk):
 
 @login_required
 def create_character(request, campaign_pk):
-    """Create a new character sheet for a campaign."""
+    """Create a new character for a campaign."""
     campaign = get_object_or_404(Campaign, pk=campaign_pk)
     membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
     
@@ -481,21 +481,37 @@ def create_character(request, campaign_pk):
         game_settings = None
     
     if request.method == 'POST':
-        form = CharacterSheetForm(request.POST, request.FILES, game_settings=game_settings)
-        if form.is_valid():
-            character_sheet = form.save(commit=False)
-            character_sheet.user = request.user
-            character_sheet.campaign = campaign
-            
-            if game_settings:
+        # Check if this is a CharacterSheet submission (has attr_ fields) or Character submission
+        has_dynamic_fields = any(key.startswith('attr_') or key.startswith('skill_') for key in request.POST.keys())
+        
+        if game_settings and has_dynamic_fields:
+            # Use CharacterSheetForm for dynamic character sheets
+            form = CharacterSheetForm(request.POST, request.FILES, game_settings=game_settings)
+            if form.is_valid():
+                character_sheet = form.save(commit=False)
+                character_sheet.user = request.user
+                character_sheet.campaign = campaign
                 character_sheet.game_settings = game_settings
-            
-            character_sheet.save()
-            
-            messages.success(request, f'Character "{character_sheet.name}" created successfully!')
-            return redirect('campaigns:campaign_detail', pk=campaign_pk)
+                character_sheet.save()
+                
+                messages.success(request, f'Character "{character_sheet.name}" created successfully!')
+                return redirect('campaigns:campaign_detail', pk=campaign_pk)
+        else:
+            # Use CharacterForm for simple characters
+            form = CharacterForm(request.POST, request.FILES)
+            if form.is_valid():
+                character = form.save(commit=False)
+                character.user = request.user
+                character.campaign = campaign
+                character.save()
+                
+                messages.success(request, f'Character "{character.name}" created successfully!')
+                return redirect('campaigns:campaign_detail', pk=campaign_pk)
     else:
-        form = CharacterSheetForm(game_settings=game_settings)
+        if game_settings:
+            form = CharacterSheetForm(game_settings=game_settings)
+        else:
+            form = CharacterForm()
     
     return render(request, 'campaigns/create_character.html', {
         'form': form,
@@ -507,71 +523,98 @@ def create_character(request, campaign_pk):
 
 @login_required
 def edit_character(request, pk):
-    """Edit a character sheet (DM can edit any, players only their own)."""
-    character_sheet = get_object_or_404(CharacterSheet, pk=pk)
+    """Edit a character (DM can edit any, players only their own)."""
+    # Try to find CharacterSheet first, then fall back to Character
+    character_sheet = CharacterSheet.objects.filter(pk=pk).first()
+    character = None
+    if not character_sheet:
+        character = get_object_or_404(Character, pk=pk)
+    
+    campaign = character_sheet.campaign if character_sheet else character.campaign
     
     # Check permissions
-    membership = CampaignMembership.objects.filter(user=request.user, campaign=character_sheet.campaign).first()
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
     if not membership:
         messages.error(request, 'You do not have access to this campaign.')
         return redirect('campaigns:dashboard')
     
+    user_field = character_sheet.user if character_sheet else character.user
     # DMs can edit all characters, players only their own
-    if membership and membership.role != 'DM' and character_sheet.user != request.user:
+    if membership and membership.role != 'DM' and user_field != request.user:
         messages.error(request, 'You do not have permission to edit this character.')
-        return redirect('campaigns:character_detail', pk=pk)
+        detail_url = 'campaigns:character_detail'
+        return redirect(detail_url, pk=pk)
     
     # Get game settings for this campaign
     try:
-        game_settings = CampaignGameSettings.objects.get(campaign=character_sheet.campaign)
+        game_settings = CampaignGameSettings.objects.get(campaign=campaign)
     except CampaignGameSettings.DoesNotExist:
         game_settings = None
     
     if request.method == 'POST':
-        form = CharacterSheetForm(request.POST, request.FILES, game_settings=game_settings, instance=character_sheet)
-        if form.is_valid():
-            character_sheet = form.save()
-            
-            messages.success(request, f'Character "{character_sheet.name}" updated successfully!')
-            return redirect('campaigns:character_detail', pk=pk)
+        if character_sheet and game_settings:
+            form = CharacterSheetForm(request.POST, request.FILES, game_settings=game_settings, instance=character_sheet)
+            if form.is_valid():
+                character_sheet = form.save()
+                messages.success(request, f'Character "{character_sheet.name}" updated successfully!')
+                return redirect('campaigns:character_detail', pk=pk)
+        else:
+            character = get_object_or_404(Character, pk=pk)
+            form = CharacterForm(request.POST, request.FILES, instance=character)
+            if form.is_valid():
+                character = form.save()
+                messages.success(request, f'Character "{character.name}" updated successfully!')
+                return redirect('campaigns:character_detail', pk=pk)
     else:
-        form = CharacterSheetForm(game_settings=game_settings, instance=character_sheet)
+        if character_sheet and game_settings:
+            form = CharacterSheetForm(game_settings=game_settings, instance=character_sheet)
+        else:
+            character = get_object_or_404(Character, pk=pk)
+            form = CharacterForm(instance=character)
     
     return render(request, 'campaigns/create_character.html', {
         'form': form,
-        'campaign': character_sheet.campaign,
+        'campaign': campaign,
         'membership': membership,
-        'character': character_sheet,
+        'character': character_sheet if character_sheet else character,
         'game_settings': game_settings,
     })
 
 
 @login_required
 def character_detail(request, pk):
-    """View a character sheet."""
-    character_sheet = get_object_or_404(CharacterSheet, pk=pk)
+    """View a character."""
+    # Try to find CharacterSheet first, then fall back to Character
+    character_sheet = CharacterSheet.objects.filter(pk=pk).first()
+    character = None
+    if not character_sheet:
+        character = get_object_or_404(Character, pk=pk)
+    
+    campaign = character_sheet.campaign if character_sheet else character.campaign
     
     # Check permissions
-    membership = CampaignMembership.objects.filter(user=request.user, campaign=character_sheet.campaign).first()
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
     if not membership:
         messages.error(request, 'You do not have access to this campaign.')
         return redirect('campaigns:dashboard')
     
+    user_field = character_sheet.user if character_sheet else character.user
     # DMs can view all characters, players only their own
-    if membership and membership.role != 'DM' and character_sheet.user != request.user:
+    if membership and membership.role != 'DM' and user_field != request.user:
         messages.error(request, 'You do not have permission to view this character.')
-        return redirect('campaigns:campaign_detail', pk=character_sheet.campaign.pk)
+        return redirect('campaigns:campaign_detail', pk=campaign.pk)
     
-    inventory = InventoryItem.objects.filter(character_sheet=character_sheet)
+    # Get inventory for both models
+    inventory = InventoryItem.objects.filter(character_sheet=character_sheet) if character_sheet else InventoryItem.objects.filter(character=character)
     
     # Get game settings for displaying field labels
     try:
-        game_settings = CampaignGameSettings.objects.get(campaign=character_sheet.campaign)
+        game_settings = CampaignGameSettings.objects.get(campaign=campaign)
     except CampaignGameSettings.DoesNotExist:
         game_settings = None
     
     return render(request, 'campaigns/character_detail.html', {
-        'character': character_sheet,
+        'character': character_sheet if character_sheet else character,
         'inventory': inventory,
         'membership': membership,
         'game_settings': game_settings,
@@ -581,15 +624,22 @@ def character_detail(request, pk):
 @login_required
 def add_inventory_item(request, character_pk):
     """Add an item to a character's inventory."""
-    character_sheet = get_object_or_404(CharacterSheet, pk=character_pk)
+    # Try to find CharacterSheet first, then fall back to Character
+    character_sheet = CharacterSheet.objects.filter(pk=character_pk).first()
+    character = None
+    if not character_sheet:
+        character = get_object_or_404(Character, pk=character_pk)
+    
+    campaign = character_sheet.campaign if character_sheet else character.campaign
     
     # Check permissions (DMs can edit any, players only their own)
-    membership = CampaignMembership.objects.filter(user=request.user, campaign=character_sheet.campaign).first()
+    membership = CampaignMembership.objects.filter(user=request.user, campaign=campaign).first()
     if not membership:
         messages.error(request, 'You do not have access to this campaign.')
         return redirect('campaigns:dashboard')
     
-    if membership and membership.role != 'DM' and character_sheet.user != request.user:
+    user_field = character_sheet.user if character_sheet else character.user
+    if membership and membership.role != 'DM' and user_field != request.user:
         messages.error(request, 'You do not have permission to edit this character.')
         return redirect('campaigns:character_detail', pk=character_pk)
     
@@ -597,7 +647,10 @@ def add_inventory_item(request, character_pk):
         form = InventoryItemForm(request.POST, request.FILES)
         if form.is_valid():
             item = form.save(commit=False)
-            item.character_sheet = character_sheet
+            if character_sheet:
+                item.character_sheet = character_sheet
+            else:
+                item.character = character
             item.save()
             
             messages.success(request, f'Item "{item.name}" added to inventory!')
@@ -607,7 +660,7 @@ def add_inventory_item(request, character_pk):
     
     return render(request, 'campaigns/add_inventory.html', {
         'form': form,
-        'character': character_sheet,
+        'character': character_sheet if character_sheet else character,
     })
 
 
@@ -670,23 +723,34 @@ def delete_campaign(request, pk):
 @login_required
 def delete_character(request, pk):
     """Delete a character (Admin or character owner)."""
-    character_sheet = get_object_or_404(CharacterSheet, pk=pk)
-    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=character_sheet.campaign)
+    # Try to find CharacterSheet first, then fall back to Character
+    character_sheet = CharacterSheet.objects.filter(pk=pk).first()
+    character = None
+    if not character_sheet:
+        character = get_object_or_404(Character, pk=pk)
     
+    campaign = character_sheet.campaign if character_sheet else character.campaign
+    membership = get_object_or_404(CampaignMembership, user=request.user, campaign=campaign)
+    
+    user_field = character_sheet.user if character_sheet else character.user
     # Only DM or the character owner can delete
-    if membership and membership.role != 'DM' and character_sheet.user != request.user:
+    if membership and membership.role != 'DM' and user_field != request.user:
         messages.error(request, 'You do not have permission to delete this character.')
         return redirect('campaigns:character_detail', pk=pk)
     
     if request.method == 'POST':
-        character_name = character_sheet.name
-        campaign_pk = character_sheet.campaign.pk
-        character_sheet.delete()
+        character_name = character_sheet.name if character_sheet else character.name
+        campaign_pk = campaign.pk
+        if character_sheet:
+            character_sheet.delete()
+        else:
+            character.delete()
         messages.success(request, f'Character "{character_name}" has been deleted.')
         return redirect('campaigns:campaign_detail', pk=campaign_pk)
     
+    object_to_delete = character_sheet if character_sheet else character
     return render(request, 'campaigns/confirm_delete.html', {
-        'object': character_sheet,
+        'object': object_to_delete,
         'object_type': 'character',
     })
 
