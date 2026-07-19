@@ -263,8 +263,12 @@
 }
 
 .message-bubble.ic-message {
-    border-left: 3px solid #40E0D0;
+    border-left: 3px solid #2d5a50;
     background-color: #1a3d3a;
+}
+
+.message-bubble.ic-message.user-message {
+    border-left: 3px solid #40E0D0;
 }
 
 .message-bubble.dm-only {
@@ -359,6 +363,19 @@
 
 .message-bubble.user-message .action-btn:hover {
     background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* IC messages should not be right-aligned */
+.message-bubble.ic-message.user-message {
+    margin-left: auto;
+    border-left: 3px solid #40E0D0;
+    border-right: none;
+    background-color: #1a3d3a;
+}
+
+.message-bubble.ic-message.user-message .sender-name,
+.message-bubble.ic-message.user-message .message-content {
+    color: #40E0D0;
 }
 
 .message-header {
@@ -861,7 +878,8 @@ function renderMessages(messages) {
             bubbleClass = 'dice-roll';
         }
         
-        const avatarUrl = msg.sender_avatar || '/static/images/default-avatar.png';
+        const DEFAULT_AVATAR = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="50" fill="%23666"/%3E%3Ctext x="50" y="65" font-family="Arial" font-size="40" text-anchor="middle" fill="white"%3E?%3C/text%3E%3C/svg%3E';
+        const avatarUrl = msg.sender_avatar || DEFAULT_AVATAR;
         const charAvatarUrl = msg.character_avatar || null;
         
         html += `
@@ -871,7 +889,7 @@ function renderMessages(messages) {
                     <span>
                         ${charAvatarUrl && msg.message_type === 'IC' ? `<img src="${escapeHtml(charAvatarUrl)}" alt="" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 0.5rem; vertical-align: middle;">` : ''}
                         ${!charAvatarUrl || msg.message_type !== 'IC' ? `<img src="${escapeHtml(avatarUrl)}" alt="" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 0.5rem; vertical-align: middle;">` : ''}
-                        <span class="sender-name">${escapeHtml(msg.sender_name)}</span>
+                        <span class="sender-name">${msg.message_type === 'IC' && msg.character_name ? escapeHtml(msg.character_name) : escapeHtml(msg.sender_name)}</span>
                         ${isSpectator ? '<span class="spectator-badge">Spectator</span>' : ''}
                         ${msg.visibility_type === 'SECRET_WHISPER' && isWhisperToMe ? '<span class="whisper-badge" style="background-color: #ff00ff; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">Secret Whisper</span>' : ''}
                         ${msg.visibility_type === 'DM_ONLY' && isWhisperToMe ? '<span class="whisper-badge" style="background-color: #00bbf9; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">DM Whisper</span>' : ''}
@@ -954,7 +972,7 @@ async function sendMessage() {
     const plainText = editor.textContent.trim();
     
     if (!plainText) {
-        alert('Please enter a message.');
+        showModal('Error', 'Please enter a message.', 'error');
         return;
     }
     
@@ -965,7 +983,7 @@ async function sendMessage() {
         const selectedOptions = Array.from(recipientSelect.selectedOptions);
         
         if (selectedOptions.length === 0) {
-            alert('Please select at least one recipient.');
+            showModal('Error', 'Please select at least one recipient.', 'error');
             return;
         }
         
@@ -999,11 +1017,11 @@ async function sendMessage() {
             }
             loadChatMessages();
         } else {
-            alert('Error: ' + data.error);
+            showModal('Error', data.error, 'error');
         }
     } catch (error) {
         console.error('Error sending message:', error);
-        alert('Failed to send message.');
+        showModal('Error', 'Failed to send message.', 'error');
     }
 }
 

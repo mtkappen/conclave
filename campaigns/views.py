@@ -704,6 +704,16 @@ def delete_campaign(request, pk):
     
     if request.method == 'POST':
         campaign_title = campaign.title
+        
+        # Delete related objects first to avoid ProtectedError
+        from .models import CharacterSheet, CampaignGameSettings, ChatMessage, DiceRollLog, PersonalNotebook, PartyGroup, CampaignMembership
+        CharacterSheet.objects.filter(campaign=campaign).delete()
+        ChatMessage.objects.filter(campaign=campaign).delete()
+        DiceRollLog.objects.filter(campaign=campaign).delete()
+        PersonalNotebook.objects.filter(campaign=campaign).delete()
+        PartyGroup.objects.filter(campaign=campaign).delete()
+        CampaignMembership.objects.filter(campaign=campaign).delete()
+        
         campaign.delete()
         messages.success(request, f'Campaign "{campaign_title}" has been deleted.')
         
@@ -858,17 +868,17 @@ def get_chat_messages(request, campaign_pk):
             if msg.sender and msg.sender.avatar:
                 sender_avatar = msg.sender.avatar.url
             
-            # Determine display name based on message type (only for current user's messages)
+            # Determine display name based on message type (for all IC messages from players)
             display_sender_name = sender_name
             character_avatar = None
-            if msg.message_type == 'IC' and membership and membership.role == 'PLAYER' and msg.sender == request.user:
-                # Show character name for IC messages
+            if msg.message_type == 'IC' and msg.sender:
+                # Show character name for IC messages from any player
                 try:
-                    char = Character.objects.get(user=request.user, campaign=campaign)
+                    char = CharacterSheet.objects.get(user=msg.sender, campaign=campaign)
                     display_sender_name = char.name
                     if char.avatar:
                         character_avatar = char.avatar.url
-                except Character.DoesNotExist:
+                except CharacterSheet.DoesNotExist:
                     pass
             
             # Check if this is a whisper to the current user (DM_ONLY or SECRET_WHISPER)
@@ -886,6 +896,7 @@ def get_chat_messages(request, campaign_pk):
                 'sender_id': sender_id,
                 'sender_name': display_sender_name,
                 'real_sender_name': sender_name,
+                'character_name': display_sender_name if msg.message_type == 'IC' and character_avatar else None,
                 'visibility_type': msg.visibility_type,
                 'message_type': msg.message_type,
                 'is_edited': msg.is_edited,
@@ -915,7 +926,7 @@ def get_chat_messages(request, campaign_pk):
             'messages': message_list,
             'dice_rolls': dice_list,
             'user_role': membership.role if membership else None,
-            'has_character': Character.objects.filter(user=request.user, campaign=campaign).exists(),
+            'has_character': CharacterSheet.objects.filter(user=request.user, campaign=campaign).exists(),
         })
     except Exception as e:
         import traceback
@@ -1011,7 +1022,7 @@ def post_chat_message(request, campaign_pk):
     
         # Check if user has a character for IC messages
     if message_type == 'IC' and membership and membership.role == 'PLAYER':
-        if not Character.objects.filter(user=request.user, campaign=campaign).exists():
+        if not CharacterSheet.objects.filter(user=request.user, campaign=campaign).exists():
             return JsonResponse({'error': 'You need a character to send In-Character messages'}, status=400)
     
     # Handle split group visibility

@@ -28,3 +28,25 @@
   - Support different class/role naming conventions
   - Enable customizable character fields per campaign type
   - Add support for various game systems (Pathfinder, World of Darkness, etc.)
+
+## Campaign Game System Configuration
+- [ ] Add UI for DMs to configure game system settings for campaigns:
+  - [ ] Create "Configure Game System" page in DM Actions section
+  - [ ] Allow selection of game system (D&D 5e, custom, etc.)
+  - [ ] Enable customization of attributes, skills, and combat stats per campaign
+
+## Bug Fixes
+- [ ] Fix crash when users refresh after campaign deletion:
+  - Users get 404 error at `/campaign/<pk>/` when campaign is deleted but membership still exists
+  - Need to redirect to dashboard or handle stale membership references
+
+## Chat Message Type Editing
+- [ ] Allow DM/Admin to change message type (IC/OOC_RELEVANT/OOC_OFFTOPIC):
+  - Add edit option to change message_type for existing messages
+  - Currently only content can be edited, not the message classification
+
+## NPC Chat Support
+- [ ] Enable DMs to play as NPCs in chat:
+  - Allow DMs to select from their created characters (NPCs) when posting IC messages
+  - Add character selector dropdown in chat input for DMs
+  - Display NPC name/avatar instead of DM's name when posting as character
