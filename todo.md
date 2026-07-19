@@ -11,6 +11,11 @@
   - Cannot click the buttons because they disappear before mouse can reach them
   - Need to fix CSS/JavaScript hover behavior for message actions
 
+- [ ] 🚨 Security: Anyone can edit anyone else's messages:
+  - Permission check in edit_chat_message allows users to edit others' messages
+  - Only message owner, DMs, and admins should be able to edit messages
+  - Need to fix permission logic to properly restrict access
+
 ## Low Priority 🟢
 - [x] ✓ NPC Chat Support - Enable DMs to play as NPCs in chat:
   - Allow DMs to select from their created characters (NPCs) when posting IC messages
