@@ -283,7 +283,7 @@
 }
 
 .message-bubble {
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 1.5rem;
     margin-bottom: 0.5rem;
     border-radius: 8px;
     background-color: #2d2d30;
@@ -291,6 +291,15 @@
     max-width: fit-content;
     width: fit-content;
     overflow: visible !important;
+}
+
+.message-bubble::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -60px;
+    bottom: 0;
+    width: 60px;
 }
 
 .message-bubble.public {
@@ -398,6 +407,11 @@
     border-right: 3px solid #00bbf9;
 }
 
+.message-bubble.user-message::after {
+    right: auto;
+    left: -60px;
+}
+
 .message-bubble.user-message .sender-name {
     color: white;
 }
@@ -425,6 +439,11 @@
     border-left: 3px solid #40E0D0;
     border-right: none;
     background-color: #1a3d3a;
+}
+
+.message-bubble.ic-message.user-message::after {
+    right: auto;
+    left: -60px;
 }
 
 .message-bubble.ic-message.user-message .sender-name,
