@@ -297,9 +297,9 @@
     content: '';
     position: absolute;
     top: 0;
-    right: -150px;
+    right: -200px;
     bottom: 0;
-    width: 150px;
+    width: 200px;
 }
 
 .message-bubble.public {
@@ -409,7 +409,7 @@
 
 .message-bubble.user-message::after {
     right: auto;
-    left: -150px;
+    left: -200px;
 }
 
 .message-bubble.user-message .sender-name {
@@ -443,7 +443,7 @@
 
 .message-bubble.ic-message.user-message::after {
     right: auto;
-    left: -150px;
+    left: -200px;
 }
 
 .message-bubble.ic-message.user-message .sender-name,
@@ -592,7 +592,7 @@
 }
 
 .message-bubble:hover .message-actions {
-    left: calc(100% + 3rem);
+    left: calc(100% + 5rem);
     opacity: 1;
     pointer-events: auto;
 }
@@ -600,11 +600,11 @@
 /* User's own messages - buttons on left side */
 .message-bubble.user-message .message-actions {
     left: auto;
-    right: calc(100% + 3rem);
+    right: calc(100% + 5rem);
 }
 
 .message-bubble.user-message:hover .message-actions {
-    right: calc(100% + 2rem);
+    right: calc(100% + 4rem);
 }
 
 .action-btn {
