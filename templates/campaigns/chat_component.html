@@ -342,6 +342,11 @@
     border-right: none !important;
 }
 
+.message-bubble.secret-whisper.user-message::after {
+    right: auto;
+    left: -175px;
+}
+
 .message-bubble.secret-whisper.user-message .sender-name,
 .message-bubble.secret-whisper.user-message .message-content {
     color: #ff00ff !important;
@@ -354,6 +359,11 @@
     border-right: none !important;
 }
 
+.message-bubble.dm-only.user-message::after {
+    right: auto;
+    left: -175px;
+}
+
 .message-bubble.dm-only.user-message .sender-name,
 .message-bubble.dm-only.user-message .message-content {
     color: #9b5de5 !important;
@@ -362,6 +372,11 @@
 .message-bubble.split-group {
     border-left: 3px solid #00bbf9;
     background-color: #1a2d4e;
+}
+
+.message-bubble.split-group.user-message::after {
+    right: auto;
+    left: -175px;
 }
 
 /* Dice roll message styling - simple single line, small italic gray text */
@@ -592,19 +607,46 @@
 }
 
 .message-bubble:hover .message-actions {
-    left: calc(100% + 4.5rem);
+    left: calc(100% + 4rem);
     opacity: 1;
     pointer-events: auto;
 }
 
-/* User's own messages - buttons on left side */
+/* User's own messages - buttons on left side, slide out from closer */
 .message-bubble.user-message .message-actions {
     left: auto;
-    right: calc(100% + 4.5rem);
+    right: calc(100% + 2rem);
 }
 
 .message-bubble.user-message:hover .message-actions {
-    right: calc(100% + 3.5rem);
+    right: calc(100% + 4rem);
+}
+
+/* Whisper messages from other users - buttons on right side */
+.message-bubble.secret-whisper:not(.user-message) .message-actions,
+.message-bubble.dm-only:not(.user-message) .message-actions,
+.message-bubble.split-group:not(.user-message) .message-actions {
+    left: calc(100% + 2rem);
+}
+
+.message-bubble.secret-whisper:hover:not(.user-message) .message-actions,
+.message-bubble.dm-only:hover:not(.user-message) .message-actions,
+.message-bubble.split-group:hover:not(.user-message) .message-actions {
+    left: calc(100% + 4rem);
+}
+
+/* Whisper messages from current user - buttons on left side, slide out from closer */
+.message-bubble.secret-whisper.user-message .message-actions,
+.message-bubble.dm-only.user-message .message-actions,
+.message-bubble.split-group.user-message .message-actions {
+    left: auto;
+    right: calc(100% + 2rem);
+}
+
+.message-bubble.secret-whisper.user-message:hover .message-actions,
+.message-bubble.dm-only.user-message:hover .message-actions,
+.message-bubble.split-group.user-message:hover .message-actions {
+    right: calc(100% + 4rem);
 }
 
 .action-btn {
