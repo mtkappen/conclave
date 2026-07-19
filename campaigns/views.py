@@ -1012,9 +1012,11 @@ def post_chat_message(request, campaign_pk):
     # Validate visibility based on role
     # Note: membership should never be None here due to get_object_or_404 above
     if membership and membership.role == 'SPECTATOR':
-        # Spectators can only post PUBLIC OOC messages
-        visibility_type = 'PUBLIC'
-        message_type = 'OOC_RELEVANT'
+        # Spectators can post PUBLIC OOC messages, DM_ONLY whispers, and SECRET_WHISPER
+        if visibility_type not in ['PUBLIC', 'DM_ONLY', 'SECRET_WHISPER']:
+            return JsonResponse({'error': 'Spectators can only send public messages or private whispers'}, status=400)
+        if message_type == 'IC':
+            return JsonResponse({'error': 'Spectators cannot send In-Character messages'}, status=400)
     elif membership and membership.role != 'DM' and membership.role != 'PLAYER':
         return JsonResponse({'error': 'Invalid role'}, status=400)
     

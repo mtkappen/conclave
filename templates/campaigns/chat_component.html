@@ -80,6 +80,10 @@
                 <option value="DM_ONLY">🔒 Send to DM Only</option>
                 <option value="SECRET_WHISPER">🤫 Secret Whisper (Select Recipients)</option>
                 {% endif %}
+                {% if membership.role == 'SPECTATOR' %}
+                <option value="DM_ONLY">🔒 Send to DM Only</option>
+                <option value="SECRET_WHISPER">🤫 Secret Whisper (Select Recipients)</option>
+                {% endif %}
                 {% if membership.role == 'DM' or request.user.is_superuser %}
                 <option value="SECRET_WHISPER">🤫 Secret Whisper (Select Recipients)</option>
                 {% endif %}

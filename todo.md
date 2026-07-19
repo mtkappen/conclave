@@ -22,6 +22,13 @@
 - Admin can see all secrets in normal campaign mode - security issue where admins view DM whispers and hidden dice rolls at `/campaign/<pk>/` instead of only via admin interface
 - Show recipient in secret messages - recipient(s) should be displayed in italics next to sender's name for DM-only or split-group whispers
 
+## Spectator Private Chat ✅
+- [x] Give spectators the ability to send private whisper messages:
+  - [x] Allow spectators to send DM_ONLY messages (visible only to DM and spectator)
+  - [x] Allow spectators to send SECRET_WHISPER messages to specific campaign members
+  - [x] Update chat input UI to show whisper options for spectators
+  - [x] Update view logic to permit spectators to use private messaging features
+
 ## Character Creation Flexibility
 - Make character creation more flexible for other games beyond D&D:
   - Allow custom stat systems instead of fixed D&D stats
