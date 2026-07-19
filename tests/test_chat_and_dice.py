@@ -18,8 +18,8 @@ class TestChatMessages:
         """Test retrieving chat messages via API endpoint."""
         campaign = db_setup['campaign']
         
-        response = client_auth.get(reverse('campaigns:get_messages', 
-                                          kwargs={'pk': campaign.id}))
+        response = client_auth.get(reverse('campaigns:get_chat_messages', 
+                                          kwargs={'campaign_pk': campaign.id}))
         
         # Should return JSON response
         assert response.status_code == 200
@@ -29,8 +29,8 @@ class TestChatMessages:
         """Test posting a chat message successfully."""
         campaign = db_setup['campaign']
         
-        response = client_auth.post(reverse('campaigns:post_message', 
-                                           kwargs={'pk': campaign.id}), {
+        response = client_auth.post(reverse('campaigns:post_chat_message', 
+                                           kwargs={'campaign_pk': campaign.id}), {
             'message': 'Hello, adventurers!',
             'timestamp': '2024-01-01T12:00:00'
         }, content_type='application/json')
@@ -42,8 +42,8 @@ class TestChatMessages:
         """Test that posting messages requires authentication."""
         campaign = db_setup['campaign']
         
-        response = client.post(reverse('campaigns:post_message', 
-                                      kwargs={'pk': campaign.id}), {
+        response = client.post(reverse('campaigns:post_chat_message', 
+                                      kwargs={'campaign_pk': campaign.id}), {
             'message': 'Unauthenticated message'
         })
         
@@ -64,8 +64,8 @@ class TestChatMessages:
             description='Not accessible'
         )
         
-        response = client_auth.post(reverse('campaigns:post_message', 
-                                           kwargs={'pk': other_campaign.id}), {
+        response = client_auth.post(reverse('campaigns:post_chat_message', 
+                                           kwargs={'campaign_pk': other_campaign.id}), {
             'message': 'Intruder message'
         })
         
@@ -79,12 +79,12 @@ class TestChatMessages:
         # Create a message first
         message = ChatMessage.objects.create(
             campaign=campaign,
-            user=db_setup['regular_user'],
+            sender=db_setup['regular_user'],
             content='Original message'
         )
         
-        response = client_auth.post(reverse('campaigns:edit_message', 
-                                           kwargs={'pk': message.id}), {
+        response = client_auth.post(reverse('campaigns:edit_chat_message', 
+                                           kwargs={'message_pk': message.id}), {
             'content': 'Edited message'
         })
         
@@ -104,12 +104,12 @@ class TestChatMessages:
         
         other_message = ChatMessage.objects.create(
             campaign=campaign,
-            user=other_user,
+            sender=other_user,
             content="Other's message"
         )
         
-        response = client_auth.post(reverse('campaigns:edit_message', 
-                                           kwargs={'pk': other_message.id}), {
+        response = client_auth.post(reverse('campaigns:edit_chat_message', 
+                                           kwargs={'message_pk': other_message.id}), {
             'content': "Trying to edit others' message"
         })
         
@@ -123,12 +123,12 @@ class TestChatMessages:
         # Create a message first
         message = ChatMessage.objects.create(
             campaign=campaign,
-            user=db_setup['regular_user'],
+            sender=db_setup['regular_user'],
             content='Message to delete'
         )
         
-        response = client_auth.post(reverse('campaigns:delete_message', 
-                                           kwargs={'pk': message.id}))
+        response = client_auth.post(reverse('campaigns:delete_chat_message', 
+                                           kwargs={'message_pk': message.id}))
         
         # Should succeed
         assert response.status_code in [301, 302]
@@ -146,12 +146,13 @@ class TestChatMessages:
         
         other_message = ChatMessage.objects.create(
             campaign=campaign,
-            user=other_user,
+            sender=other_user,
             content="Other's message to delete"
         )
         
-        response = client_auth.post(reverse('campaigns:delete_message', 
-                                           kwargs={'pk': other_message.id}))
+        response = client_auth.post(reverse('campaigns:delete_chat_message', 
+
+                                           kwargs={'message_pk': other_message.id}))
         
         # Should fail or redirect
         assert response.status_code in [301, 302, 403]
@@ -164,8 +165,8 @@ class TestDiceRolling:
         """Test posting a dice roll successfully."""
         campaign = db_setup['campaign']
         
-        response = client_auth.post(reverse('campaigns:post_dice', 
-                                           kwargs={'pk': campaign.id}), {
+        response = client_auth.post(reverse('campaigns:post_dice_roll', 
+                                           kwargs={'campaign_pk': campaign.id}), {
             'dice_expression': '2d6+3',
             'result': 10,
             'description': 'Attack roll'
@@ -178,8 +179,8 @@ class TestDiceRolling:
         """Test that posting dice rolls requires authentication."""
         campaign = db_setup['campaign']
         
-        response = client.post(reverse('campaigns:post_dice', 
-                                      kwargs={'pk': campaign.id}), {
+        response = client.post(reverse('campaigns:post_dice_roll', 
+                                      kwargs={'campaign_pk': campaign.id}), {
             'dice_expression': '1d20'
         })
         
@@ -200,8 +201,8 @@ class TestDiceRolling:
             description='Not accessible'
         )
         
-        response = client_auth.post(reverse('campaigns:post_dice', 
-                                           kwargs={'pk': other_campaign.id}), {
+        response = client_auth.post(reverse('campaigns:post_dice_roll', 
+                                           kwargs={'campaign_pk': other_campaign.id}), {
             'dice_expression': '1d20'
         })
         
@@ -221,8 +222,8 @@ class TestDiceRolling:
         ]
         
         for expression, description in test_cases:
-            response = client_auth.post(reverse('campaigns:post_dice', 
-                                               kwargs={'pk': campaign.id}), {
+            response = client_auth.post(reverse('campaigns:post_dice_roll', 
+                                               kwargs={'campaign_pk': campaign.id}), {
                 'dice_expression': expression,
                 'description': description
             })
@@ -250,14 +251,14 @@ class TestChatIntegration:
         
         # Post multiple messages
         for i in range(5):
-            client_auth.post(reverse('campaigns:post_message', 
-                                    kwargs={'pk': campaign.id}), {
+            client_auth.post(reverse('campaigns:post_chat_message', 
+                                    kwargs={'campaign_pk': campaign.id}), {
                 'message': f'Message number {i}'
             })
         
         # Retrieve messages
-        response = client_auth.get(reverse('campaigns:get_messages', 
-                                          kwargs={'pk': campaign.id}))
+        response = client_auth.get(reverse('campaigns:get_chat_messages', 
+                                          kwargs={'campaign_pk': campaign.id}))
         
         assert response.status_code == 200
         data = json.loads(response.content)
