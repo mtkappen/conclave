@@ -16,6 +16,12 @@
   - [x] In-character chat bubbles should be teal (#40E0D0)
   - [x] Keep secret whisper messages as purple (unchanged)
 
+## Bug Reports
+- Profile pictures do not show up correctly in chat messages
+- Fix edit and delete boxes for chat messages - buttons/boxes not displaying correctly or missing from chat interface
+- Admin can see all secrets in normal campaign mode - security issue where admins view DM whispers and hidden dice rolls at `/campaign/<pk>/` instead of only via admin interface
+- Show recipient in secret messages - recipient(s) should be displayed in italics next to sender's name for DM-only or split-group whispers
+
 ## Character Creation Flexibility
 - Make character creation more flexible for other games beyond D&D:
   - Allow custom stat systems instead of fixed D&D stats
