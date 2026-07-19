@@ -283,7 +283,7 @@
 }
 
 .message-bubble {
-    padding: 0.5rem 1.5rem;
+    padding: 0.5rem 2rem;
     margin-bottom: 0.5rem;
     border-radius: 8px;
     background-color: #2d2d30;
@@ -297,9 +297,9 @@
     content: '';
     position: absolute;
     top: 0;
-    right: -60px;
+    right: -100px;
     bottom: 0;
-    width: 60px;
+    width: 100px;
 }
 
 .message-bubble.public {
@@ -409,7 +409,7 @@
 
 .message-bubble.user-message::after {
     right: auto;
-    left: -60px;
+    left: -100px;
 }
 
 .message-bubble.user-message .sender-name {
@@ -443,7 +443,7 @@
 
 .message-bubble.ic-message.user-message::after {
     right: auto;
-    left: -60px;
+    left: -100px;
 }
 
 .message-bubble.ic-message.user-message .sender-name,
@@ -977,6 +977,9 @@ function renderMessages(messages) {
         const currentUserPk = "{{ user.pk }}";
         const isUserMessage = String(msg.sender_id) === currentUserPk;
         
+        // Determine if action buttons should be shown (DMs see all, users only their own)
+        const canShowActions = USER_ROLE === 'DM' || isUserMessage;
+        
         // Special handling for dice roll messages
         const isDiceRoll = msg.message_type === 'DICE_ROLL';
         
@@ -1018,10 +1021,11 @@ function renderMessages(messages) {
                         ${msg.visibility_type === 'DM_ONLY' ? '<span class="recipient-badge" style="color: #00bbf9; font-size: 0.75rem; margin-left: 0.5rem; font-style: italic;">→ DM</span>' : ''}
                         ${msg.is_edited ? '<span class="edited-indicator">(Edited)</span>' : ''}
                     </span>
+                    ${canShowActions ? `
                     <div class="message-actions">
                         <button class="action-btn" onclick="editMessage(${msg.id})" title="Edit">✏️</button>
                         <button class="action-btn" onclick="deleteMessage(${msg.id})" title="Delete">🗑️</button>
-                    </div>
+                    </div>` : ''}
                 </div>` : ''}
                 <div class="message-content message-html">${msg.content}</div>
                 ${!isDiceRoll ? `<div class="message-time">${msg.formatted_time}</div>` : ''}
