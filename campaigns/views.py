@@ -1246,8 +1246,11 @@ def edit_chat_message(request, message_pk):
         return JsonResponse({'error': 'Message content is required'}, status=400)
     
     # Check permissions - only DMs/Admins can edit message type, everyone can edit content
-    can_edit_content = membership and membership.role == 'DM' or (message.sender and message.sender == request.user)
-    can_edit_type = membership and membership.role == 'DM'
+    is_dm_in_campaign = membership and membership.role == 'DM'
+    is_sender = message.sender and message.sender == request.user
+    
+    can_edit_content = is_dm_in_campaign or is_sender
+    can_edit_type = is_dm_in_campaign
     
     if not can_edit_content:
         return JsonResponse({'error': 'You do not have permission to edit this message'}, status=403)
@@ -1289,8 +1292,11 @@ def delete_chat_message(request, message_pk):
             role = 'DM'
         membership = TempMembership()
     
-            # Check permissions
-    if membership and membership.role != 'DM' and message.sender != request.user:
+    # Check permissions - only DMs or message sender can delete
+    is_dm = membership and membership.role == 'DM'
+    is_sender = message.sender and message.sender == request.user
+    
+    if not (is_dm or is_sender):
         return JsonResponse({'error': 'You do not have permission to delete this message'}, status=403)
     
     message.delete()
