@@ -1,7 +1,204 @@
 from decimal import Decimal
+import json
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
+
+
+def validate_json(value):
+    """Validate that a field contains valid JSON."""
+    try:
+        if isinstance(value, str):
+            json.loads(value)
+        elif isinstance(value, (dict, list)):
+            pass  # Already parsed JSON
+        else:
+            raise ValidationError("Must be valid JSON")
+    except json.JSONDecodeError:
+        raise ValidationError("Must be valid JSON")
+
+
+class GameSystem(models.Model):
+    """Predefined or custom game systems for character sheets."""
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    is_custom = models.BooleanField(default=False, help_text="True if created by a user")
+    created_by = models.ForeignKey('User', on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Templates stored as JSON
+    attribute_template = models.JSONField(
+        default=dict, 
+        help_text="Predefined attributes (e.g., {'strength': {'label': 'Strength', 'type': 'number', 'default': 10}})"
+    )
+    skill_template = models.JSONField(
+        default=list, 
+        help_text="Predefined skills list"
+    )
+    combat_stat_template = models.JSONField(
+        default=dict,
+        help_text="Combat stats template (HP, AC, etc.)"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name}{' (Custom)' if self.is_custom else ''}"
+
+
+class CampaignGameSettings(models.Model):
+    """Game system settings for a specific campaign."""
+    campaign = models.OneToOneField('Campaign', on_delete=models.CASCADE, related_name='game_settings')
+    game_system = models.ForeignKey('GameSystem', on_delete=models.PROTECT)
+    
+    # Customizations
+    custom_attributes = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Attribute overrides/additions for this campaign"
+    )
+    custom_skills = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Skill overrides/additions for this campaign"
+    )
+    
+    # Rule book configuration
+    rule_book_source = models.CharField(
+        max_length=100,
+        default='custom',
+        help_text="Official rulebook ID or 'custom' for custom content"
+    )
+    rule_book_title = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Title of the selected rule book"
+    )
+    
+    # Visibility settings (JSON)
+    field_visibility = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Visibility rules for fields: 'public', 'player_only', 'dm_only'"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.campaign.title} - {self.game_system.name}"
+
+    def get_effective_attributes(self):
+        """Merge base template with custom attributes."""
+        attrs = dict(self.game_system.attribute_template)
+        attrs.update(self.custom_attributes)
+        return attrs
+
+    def get_effective_skills(self):
+        """Merge base skills with custom skills."""
+        skills = list(self.game_system.skill_template)
+        for custom in self.custom_skills:
+            if custom not in skills:
+                skills.append(custom)
+        return skills
+
+
+class CharacterSheet(models.Model):
+    """Flexible character sheet supporting any game system."""
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
+    campaign = models.ForeignKey('Campaign', on_delete=models.CASCADE)
+    game_settings = models.ForeignKey('CampaignGameSettings', on_delete=models.PROTECT, null=True, blank=True)
+    
+    # Basic info
+    name = models.CharField(max_length=100)
+    class_name = models.CharField(max_length=100, blank=True, help_text="Character class/archetype")
+    level = models.IntegerField(default=1, validators=[MinValueValidator(1)])
+    background = models.CharField(max_length=200, blank=True)
+    
+    # Dynamic data stored as JSON
+    attributes = models.JSONField(
+        default=dict,
+        help_text="Attribute values: {'strength': 16, 'dexterity': 14, ...}"
+    )
+    skills = models.JSONField(
+        default=dict,
+        help_text="Skill values: {'acrobatics': 5, 'stealth': 3, ...}"
+    )
+    combat_stats = models.JSONField(
+        default=dict,
+        help_text="Combat stats: {'hp': 10, 'max_hp': 10, 'ac': 12, ...}"
+    )
+    
+    # Spell tracking (for magic systems)
+    spell_slots = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Spell slots by level: {'1': 4, '2': 3, ...}"
+    )
+    known_spells = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of known spells with details"
+    )
+    prepared_spells = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Currently prepared spells"
+    )
+    
+    # Custom fields for anything else
+    custom_fields = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Any additional custom fields"
+    )
+    
+    # Inventory (keeping separate model for better querying)
+    # Still use InventoryItem model with character_sheet foreign key
+    
+    avatar = models.ImageField(upload_to='characters/', null=True, blank=True)
+    description = models.TextField(blank=True)
+    
+    # Visibility overrides per field (JSON)
+    field_visibility = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Per-field visibility: {'strength': 'public', 'secret_notes': 'dm_only'}"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'campaign', 'name')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.class_name}) - {self.campaign.title}"
+
+    def get_attribute_modifier(self, attribute_name):
+        """Calculate modifier for D&D-style attributes: (value - 10) // 2."""
+        value = self.attributes.get(attribute_name, 10)
+        return (int(value) - 10) // 2
+
+    def get_proficiency_bonus(self, level=None):
+        """D&D 5e proficiency bonus by level."""
+        if level is None:
+            level = self.level
+        if level < 5:
+            return 2
+        elif level < 9:
+            return 3
+        elif level < 13:
+            return 4
+        elif level < 17:
+            return 5
+        else:
+            return 6
 
 
 class User(AbstractUser):
@@ -117,7 +314,8 @@ class Character(models.Model):
 
 class InventoryItem(models.Model):
     """Items belonging to a character."""
-    character = models.ForeignKey(Character, on_delete=models.CASCADE)
+    character = models.ForeignKey(Character, on_delete=models.CASCADE, null=True, blank=True)
+    character_sheet = models.ForeignKey(CharacterSheet, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=100)
     quantity = models.IntegerField(default=1, validators=[MinValueValidator(1)])
     weight = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('0.0'))
@@ -125,6 +323,8 @@ class InventoryItem(models.Model):
     image = models.ImageField(upload_to='inventory/', null=True, blank=True)
 
     def __str__(self):
+        if self.character_sheet:
+            return f"{self.name} x{self.quantity} ({self.character_sheet.name})"
         return f"{self.name} x{self.quantity} ({self.character.name})"
 
 
@@ -276,9 +476,97 @@ class CampaignRuleBook(models.Model):
     """Campaign rule book - visible to all members, editable only by DM."""
     campaign = models.OneToOneField(Campaign, on_delete=models.CASCADE, related_name='rule_book')
     title = models.CharField(max_length=200, default="Campaign Rule Book")
+    
+    # Link to game settings if using official rulebook
+    game_settings = models.ForeignKey(CampaignGameSettings, on_delete=models.SET_NULL, null=True, blank=True)
+    
     content = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return f"Rule Book for {self.campaign.title}"
+
+
+# Default game system templates (created via migration or management command)
+DEFAULT_GAME_SYSTEMS = {
+    'dnd_5e': {
+        'name': 'Dungeons & Dragons 5e',
+        'description': 'Dungeons & Dragons Fifth Edition',
+        'attribute_template': {
+            'strength': {'label': 'Strength', 'type': 'number', 'default': 10, 'min': 1, 'max': 30},
+            'dexterity': {'label': 'Dexterity', 'type': 'number', 'default': 10, 'min': 1, 'max': 30},
+            'constitution': {'label': 'Constitution', 'type': 'number', 'default': 10, 'min': 1, 'max': 30},
+            'intelligence': {'label': 'Intelligence', 'type': 'number', 'default': 10, 'min': 1, 'max': 30},
+            'wisdom': {'label': 'Wisdom', 'type': 'number', 'default': 10, 'min': 1, 'max': 30},
+            'charisma': {'label': 'Charisma', 'type': 'number', 'default': 10, 'min': 1, 'max': 30},
+        },
+        'skill_template': [
+            'acrobatics', 'animal_handling', 'arcana', 'athletics', 'deception',
+            'history', 'insight', 'intimidation', 'investigation', 'medicine',
+            'nature', 'perception', 'performance', 'persuasion', 'religion',
+            'sleight_of_hand', 'stealth', 'survival'
+        ],
+        'combat_stat_template': {
+            'hp': {'label': 'Current HP', 'type': 'number', 'default': 10},
+            'max_hp': {'label': 'Max HP', 'type': 'number', 'default': 10},
+            'ac': {'label': 'Armor Class', 'type': 'number', 'default': 10},
+            'initiative': {'label': 'Initiative', 'type': 'number', 'default': 0},
+            'speed': {'label': 'Speed', 'type': 'number', 'default': 30},
+            'proficiency_bonus': {'label': 'Proficiency Bonus', 'type': 'number', 'default': 2},
+        }
+    },
+    'pathfinder_2e': {
+        'name': 'Pathfinder Second Edition',
+        'description': 'Pathfinder RPG Second Edition',
+        'attribute_template': {
+            'strength': {'label': 'Strength', 'type': 'number', 'default': 10},
+            'dexterity': {'label': 'Dexterity', 'type': 'number', 'default': 10},
+            'constitution': {'label': 'Constitution', 'type': 'number', 'default': 10},
+            'intelligence': {'label': 'Intelligence', 'type': 'number', 'default': 10},
+            'wisdom': {'label': 'Wisdom', 'type': 'number', 'default': 10},
+            'charisma': {'label': 'Charisma', 'type': 'number', 'default': 10},
+        },
+        'skill_template': [
+            'acrobatics', 'arcana', 'athletics', 'crafting', 'deception', 'diplomacy',
+            'intimidation', 'investigation', 'medicine', 'nature', 'occultism',
+            'performance', 'religion', 'society', 'stealth', 'survival', 'thievery'
+        ],
+        'combat_stat_template': {
+            'hp': {'label': 'Current HP', 'type': 'number', 'default': 10},
+            'max_hp': {'label': 'Max HP', 'type': 'number', 'default': 10},
+            'ac': {'label': 'Armor Class', 'type': 'number', 'default': 10},
+            'tac': {'label': 'Tactical AC', 'type': 'number', 'default': 10},
+            'will_dc': {'label': 'Will DC', 'type': 'number', 'default': 10},
+            'reflex_dc': {'label': 'Reflex DC', 'type': 'number', 'default': 10},
+            'perception': {'label': 'Perception', 'type': 'number', 'default': 0},
+            'speed': {'label': 'Speed', 'type': 'number', 'default': 25},
+        }
+    },
+    'world_of_darkness': {
+        'name': 'World of Darkness',
+        'description': 'Vampire: The Masquerade / World of Darkness',
+        'attribute_template': {
+            'intelligence': {'label': 'Intelligence', 'type': 'number', 'default': 1, 'min': 0, 'max': 5},
+            'wits': {'label': 'Wits', 'type': 'number', 'default': 1, 'min': 0, 'max': 5},
+            'presence': {'label': 'Presence', 'type': 'number', 'default': 1, 'min': 0, 'max': 5},
+            'strength': {'label': 'Strength', 'type': 'number', 'default': 1, 'min': 0, 'max': 5},
+            'dexterity': {'label': 'Dexterity', 'type': 'number', 'default': 1, 'min': 0, 'max': 5},
+            'stamina': {'label': 'Stamina', 'type': 'number', 'default': 1, 'min': 0, 'max': 5},
+            'charisma': {'label': 'Charisma', 'type': 'number', 'default': 1, 'min': 0, 'max': 5},
+            'manipulation': {'label': 'Manipulation', 'type': 'number', 'default': 1, 'min': 0, 'max': 5},
+            'composure': {'label': 'Composure', 'type': 'number', 'default': 1, 'min': 0, 'max': 5},
+        },
+        'skill_template': [
+            'athletics', 'brawl', 'drive', 'firearms', 'larceny', 'stealth', 'survival',
+            'awareness', 'empathy', 'expression', 'intimidation', 'leadership', 'performance',
+            'science', 'slang', 'streetwise', 'subterfuge'
+        ],
+        'combat_stat_template': {
+            'health': {'label': 'Health Levels', 'type': 'number', 'default': 7},
+            'willpower': {'label': 'Willpower', 'type': 'number', 'default': 3},
+            'defense': {'label': 'Defense', 'type': 'number', 'default': 0},
+            'initiative': {'label': 'Initiative', 'type': 'number', 'default': 0},
+        }
+    },
+}

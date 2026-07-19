@@ -2,14 +2,26 @@
 
 {% block title %}{% if character %}Edit Character{% else %}Create Character{% endif %} - {{ campaign.title }}{% endblock %}
 
+{% load sheet_filters %}
+
 {% block content %}
-<div style="max-width: 850px; margin: 2rem auto;">
+<div style="max-width: 900px; margin: 2rem auto;">
     <div class="card">
         <h2 style="font-size: 1.6rem;">🎭 {% if character %}Edit Character: {{ character.name }}{% else %}Create New Character{% endif %}</h2>
         <p style="color: #aaa; margin-bottom: 1.25rem; font-size: 0.95rem;">Campaign: {{ campaign.title }}</p>
         
+        {% if game_settings %}
+        <div style="background-color: #0f3460; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+            <span style="color: #aaa; font-size: 0.9rem;">Game System: </span>
+            <strong style="color: #e94560;">{{ game_settings.game_system.name }}</strong>
+        </div>
+        {% endif %}
+        
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <h3 style="margin: 1.25rem 0 0.85rem; color: #e94560; font-size: 1.25rem;">Basic Information</h3>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div>
@@ -18,18 +30,81 @@
                 </div>
                 
                 <div>
-                    <label for="{{ form.class_name.id_for_label }}" style="font-size: 0.95rem;">Class</label>
+                    <label for="{{ form.class_name.id_for_label }}" style="font-size: 0.95rem;">Class/Archetype</label>
                     {{ form.class_name }}
                 </div>
             </div>
             
-            <label for="{{ form.level.id_for_label }}" style="font-size: 0.95rem; margin-top: 0.85rem; display: block;">Level</label>
-            {{ form.level }}
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-top: 0.85rem;">
+                <div>
+                    <label for="{{ form.level.id_for_label }}" style="font-size: 0.95rem;">Level</label>
+                    {{ form.level }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.background.id_for_label }}" style="font-size: 0.95rem;">Background</label>
+                    {{ form.background }}
+                </div>
+            </div>
             
+            <!-- Dynamic Attributes -->
+            {% if game_settings %}
+            <h3 style="margin: 1.25rem 0 0.85rem; color: #e94560; font-size: 1.25rem;">Attributes</h3>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem;">
+                {% for attr_key, attr_config in game_settings.get_effective_attributes.items %}
+                <div>
+                    <label for="id_attr_{{ attr_key }}" style="font-size: 0.95rem;">{{ attr_config.label }}</label>
+                    <input type="number" 
+                           name="attr_{{ attr_key }}" 
+                           id="id_attr_{{ attr_key }}"
+                           value="{{ character.attributes|get_item:attr_key|default:attr_config.default }}"
+                           min="{{ attr_config.min|default:1 }}" 
+                           max="{{ attr_config.max|default:30 }}"
+                           class="form-control">
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Dynamic Skills -->
+            {% if game_settings.get_effective_skills %}
+            <h3 style="margin: 1.25rem 0 0.85rem; color: #e94560; font-size: 1.25rem;">Skills</h3>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem;">
+                {% for skill in game_settings.get_effective_skills %}
+                <div>
+                    <label for="id_skill_{{ skill }}" style="font-size: 0.95rem;">{{ skill|title }}</label>
+                    <input type="number" 
+                           name="skill_{{ skill }}" 
+                           id="id_skill_{{ skill }}"
+                           value="{{ character.skills|get_item:skill|default:0 }}"
+                           min="0"
+                           class="form-control">
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Dynamic Combat Stats -->
+            <h3 style="margin: 1.25rem 0 0.85rem; color: #e94560; font-size: 1.25rem;">Combat Stats</h3>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem;">
+                {% for stat_key, stat_config in game_settings.game_system.combat_stat_template.items %}
+                <div>
+                    <label for="id_combat_{{ stat_key }}" style="font-size: 0.95rem;">{{ stat_config.label }}</label>
+                    <input type="number" 
+                           name="combat_{{ stat_key }}" 
+                           id="id_combat_{{ stat_key }}"
+                           value="{{ character.combat_stats|get_item:stat_key|default:stat_config.default }}"
+                           min="0"
+                           class="form-control">
+                </div>
+                {% endfor %}
+            </div>
+            
+            {% else %}
+            <!-- Fallback for campaigns without game settings (old D&D format) -->
             <h3 style="margin: 1.25rem 0 0.85rem; color: #e94560; font-size: 1.25rem;">Ability Scores</h3>
-            <p style="color: #aaa; margin-bottom: 0.85rem; font-size: 0.9rem;">
-                Tip: Standard array values are 15, 14, 13, 12, 10, 8. Adjust as needed!
-            </p>
             
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem;">
                 <div>
@@ -81,8 +156,10 @@
                     {{ form.armor_class }}
                 </div>
             </div>
+            {% endif %}
             
-            <label for="{{ form.avatar.id_for_label }}" style="font-size: 0.95rem; margin-top: 0.85rem; display: block;">Character Avatar (Optional)</label>
+            <!-- Avatar and Description -->
+            <label for="{{ form.avatar.id_for_label }}" style="font-size: 0.95rem; margin-top: 1.25rem; display: block;">Character Avatar (Optional)</label>
             {{ form.avatar }}
             
             <label for="{{ form.description.id_for_label }}" style="font-size: 0.95rem; margin-top: 0.85rem; display: block;">Description / Background</label>
@@ -93,9 +170,7 @@
             <div style="background-color: #0f3460; padding: 1.25rem; border-radius: 8px; margin: 1.25rem 0;">
                 <h4 style="color: #e94560; margin-bottom: 0.4rem; font-size: 1.1rem;">🎓 First Time Character Creation?</h4>
                 <p style="font-size: 0.9rem; color: #aaa;">
-                    Need help? Check out our 
-                    <a href="#" onclick="alert('Strength: Physical power\nDexterity: Agility and reflexes\nConstitution: Health and endurance\nIntelligence: Knowledge and reasoning\nWisdom: Perception and insight\nCharisma: Charm and persuasion'); return false;" 
-                       style="color: #e94560;">stat guide</a>
+                    Need help? Ask your DM for guidance on the game system being used!
                 </p>
             </div>
             {% endif %}
@@ -109,10 +184,8 @@
 </div>
 
 <script>
-// Simple stat explanation on hover
 document.querySelectorAll('input[id^="id_"]').forEach(function(input) {
     input.addEventListener('mouseenter', function() {
-        // Could add tooltips here in future
     });
 });
 </script>

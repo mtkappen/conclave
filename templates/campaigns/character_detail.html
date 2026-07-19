@@ -2,6 +2,8 @@
 
 {% block title %}{{ character.name }} - Character Sheet{% endblock %}
 
+{% load sheet_filters %}
+
 {% block content %}
 <div style="max-width: 900px; margin: 2rem auto;">
     <div style="margin-bottom: 2rem;">
@@ -10,17 +12,72 @@
         <div style="display: flex; justify-content: space-between; align-items: start;">
             <div>
                 <h1>{{ character.name }}</h1>
-                <p style="color: #aaa; margin-top: 0.5rem;">{{ character.class_name }} - Level {{ character.level }}</p>
+                <p style="color: #aaa; margin-top: 0.5rem;">{{ character.class_name|default:'Unknown Class' }} - Level {{ character.level }}</p>
+                {% if character.background %}
+                <p style="color: #888; font-size: 0.9rem; margin-top: 0.25rem;">Background: {{ character.background }}</p>
+                {% endif %}
             </div>
             
             <span class="role-badge role-{{ membership.role|lower }}">
                 Your Role: {{ membership.get_role_display }}
             </span>
         </div>
+        
+        <!-- Game System Info -->
+        {% if game_settings %}
+        <div style="background-color: #0f3460; padding: 0.75rem 1rem; border-radius: 8px; margin-top: 1rem; display: inline-block;">
+            <span style="color: #aaa; font-size: 0.85rem;">Game System: </span>
+            <strong style="color: #e94560;">{{ game_settings.game_system.name }}</strong>
+        </div>
+        {% endif %}
     </div>
 
     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
-        <!-- Main Character Stats -->
+        <!-- Dynamic Attributes -->
+        {% if game_settings %}
+        <div class="card">
+            <h2>📊 Attributes</h2>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+                {% for attr_key, attr_config in game_settings.get_effective_attributes.items %}
+                <div style="background-color: #0f3460; padding: 1rem; border-radius: 8px;">
+                    <h4 style="color: #e94560; margin-bottom: 0.5rem;">{{ attr_config.label|upper }}</h4>
+                    <p style="font-size: 1.5rem; font-weight: bold;">{{ character.attributes|get_item:attr_key|default:attr_config.default }}</p>
+                    <small style="color: #666;">{{ attr_config.label }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Dynamic Skills -->
+        {% if game_settings.get_effective_skills %}
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>🎯 Skills</h2>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                {% for skill in game_settings.get_effective_skills %}
+                <div style="background-color: #0f3460; padding: 0.75rem; border-radius: 8px; text-align: center;">
+                    <p style="font-size: 1.1rem; font-weight: bold; color: #e94560;">{{ character.skills|get_item:skill|default:0 }}</p>
+                    <small style="color: #aaa;">{{ skill|title }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Dynamic Combat Stats -->
+        <div class="card">
+            <h2>⚔️ Combat Stats</h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for stat_key, stat_config in game_settings.game_system.combat_stat_template.items %}
+                <div style="background-color: #0f3460; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                    <h4 style="color: #e94560; margin-bottom: 0.5rem;">{{ stat_config.label }}</h4>
+                    <p style="font-size: 2rem; font-weight: bold;">{{ character.combat_stats|get_item:stat_key|default:stat_config.default }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        {% else %}
+        <!-- Fallback for old D&D format -->
         <div class="card">
             <h2>📊 Ability Scores</h2>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
@@ -77,6 +134,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Character Info -->
         <div class="card" style="grid-column: 1 / -1;">

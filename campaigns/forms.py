@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import User, Campaign, Character, InventoryItem
+from .models import User, Campaign, Character, CharacterSheet, InventoryItem, GameSystem, CampaignGameSettings
 
 
 class UserSettingsForm(forms.ModelForm):
@@ -174,6 +174,157 @@ class CharacterForm(forms.ModelForm):
             'avatar': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+
+class GameSystemForm(forms.ModelForm):
+    """Form for creating custom game systems."""
+    class Meta:
+        model = GameSystem
+        fields = ['name', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+
+class CampaignGameSettingsForm(forms.ModelForm):
+    """Form for DM to configure game system for a campaign."""
+    class Meta:
+        model = CampaignGameSettings
+        fields = ['game_system', 'rule_book_source', 'rule_book_title']
+        widgets = {
+            'game_system': forms.Select(attrs={'class': 'form-control'}),
+            'rule_book_source': forms.TextInput(attrs={'class': 'form-control'}),
+            'rule_book_title': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+
+class CharacterSheetForm(forms.Form):
+    """Dynamic form for character sheet creation/editing based on game system."""
+    
+    # Basic info fields
+    name = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    class_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Class/Archetype'}))
+    level = forms.IntegerField(min_value=1, initial=1, widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    background = forms.CharField(max_length=200, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    description = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
+    avatar = forms.ImageField(required=False)
+    
+    def __init__(self, *args, **kwargs):
+        self.game_settings = kwargs.pop('game_settings', None)
+        self.instance = kwargs.pop('instance', None)
+        super().__init__(*args, **kwargs)
+        
+        if self.game_settings:
+            # Add dynamic attribute fields
+            attributes = self.game_settings.get_effective_attributes()
+            for attr_key, attr_config in attributes.items():
+                field_name = f'attr_{attr_key}'
+                default = attr_config.get('default', 10)
+                min_val = attr_config.get('min', 1)
+                max_val = attr_config.get('max', 30)
+                label = attr_config.get('label', attr_key.title())
+                
+                # Use existing value if editing, otherwise use default
+                initial_value = None
+                if self.instance and hasattr(self.instance, 'attributes'):
+                    initial_value = self.instance.attributes.get(attr_key)
+                
+                self.fields[field_name] = forms.IntegerField(
+                    min_value=min_val,
+                    max_value=max_val,
+                    initial=initial_value if initial_value is not None else default,
+                    label=label,
+                    widget=forms.NumberInput(attrs={'class': 'form-control'})
+                )
+            
+            # Add dynamic skill fields
+            skills = self.game_settings.get_effective_skills()
+            for skill in skills:
+                field_name = f'skill_{skill}'
+                
+                # Use existing value if editing, otherwise use 0
+                initial_value = None
+                if self.instance and hasattr(self.instance, 'skills'):
+                    initial_value = self.instance.skills.get(skill)
+                
+                self.fields[field_name] = forms.IntegerField(
+                    min_value=0,
+                    initial=initial_value if initial_value is not None else 0,
+                    label=skill.replace('_', ' ').title(),
+                    required=False,
+                    widget=forms.NumberInput(attrs={'class': 'form-control'})
+                )
+            
+            # Add dynamic combat stat fields
+            combat_stats = self.game_settings.game_system.combat_stat_template
+            for stat_key, stat_config in combat_stats.items():
+                field_name = f'combat_{stat_key}'
+                default = stat_config.get('default', 0)
+                label = stat_config.get('label', stat_key.title())
+                
+                # Use existing value if editing, otherwise use default
+                initial_value = None
+                if self.instance and hasattr(self.instance, 'combat_stats'):
+                    initial_value = self.instance.combat_stats.get(stat_key)
+                
+                self.fields[field_name] = forms.IntegerField(
+                    min_value=0,
+                    initial=initial_value if initial_value is not None else default,
+                    label=label,
+                    widget=forms.NumberInput(attrs={'class': 'form-control'})
+                )
+
+    def save(self, commit=True):
+        """Save character sheet with dynamic data."""
+        # Use existing instance if provided (for editing), otherwise create new
+        if self.instance and self.instance.pk:
+            instance = self.instance
+        else:
+            instance = CharacterSheet()
+        
+        # Basic fields
+        instance.name = self.cleaned_data['name']
+        instance.class_name = self.cleaned_data.get('class_name', '')
+        instance.level = self.cleaned_data['level']
+        instance.background = self.cleaned_data.get('background', '')
+        instance.description = self.cleaned_data.get('description', '')
+        
+        if 'avatar' in self.cleaned_data:
+            instance.avatar = self.cleaned_data['avatar']
+        
+        # Collect dynamic data
+        attributes = {}
+        skills = {}
+        combat_stats = {}
+        
+        if self.game_settings:
+            # Extract attribute values
+            for attr_key in self.game_settings.get_effective_attributes().keys():
+                field_name = f'attr_{attr_key}'
+                if field_name in self.cleaned_data:
+                    attributes[attr_key] = self.cleaned_data[field_name]
+            
+            # Extract skill values
+            for skill in self.game_settings.get_effective_skills():
+                field_name = f'skill_{skill}'
+                if field_name in self.cleaned_data and self.cleaned_data[field_name]:
+                    skills[skill] = self.cleaned_data[field_name]
+            
+            # Extract combat stats
+            for stat_key in self.game_settings.game_system.combat_stat_template.keys():
+                field_name = f'combat_{stat_key}'
+                if field_name in self.cleaned_data:
+                    combat_stats[stat_key] = self.cleaned_data[field_name]
+        
+        instance.attributes = attributes
+        instance.skills = skills
+        instance.combat_stats = combat_stats
+        
+        if commit:
+            instance.save()
+        
+        return instance
 
 
 class InventoryItemForm(forms.ModelForm):

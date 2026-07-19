@@ -16,6 +16,21 @@
             <label for="{{ form.description.id_for_label }}" style="font-size: 0.95rem;">Description</label>
             {{ form.description }}
             
+            <!-- Game System Selection -->
+            <div style="margin-top: 1.25rem;">
+                <label for="game_system" style="font-size: 0.95rem; display: block; margin-bottom: 0.5rem;">Game System</label>
+                <select name="game_system" id="id_game_system" class="form-control">
+                    <option value="">-- Select a Game System (Optional) --</option>
+                    {% for system in game_systems %}
+                    <option value="{{ system.id }}">{{ system.name }}</option>
+                    {% endfor %}
+                </select>
+                <p style="color: #aaa; font-size: 0.85rem; margin-top: 0.4rem;">
+                    Choose a game system to configure character sheets for this campaign. 
+                    You can skip this and set it up later as the DM.
+                </p>
+            </div>
+            
             <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
                 <button type="submit" class="btn">Create Campaign</button>
                 <a href="{% url 'campaigns:dashboard' %}" class="btn btn-secondary">Cancel</a>
@@ -29,6 +44,7 @@
             <li>Choose an exciting title that reflects your adventure</li>
             <li>Add a brief description to help players understand the setting</li>
             <li>You'll be automatically set as the Dungeon Master (DM)</li>
+            <li>Select a game system for dynamic character sheets (D&D 5e, Pathfinder, World of Darkness, or custom)</li>
             <li>As DM, you can invite Players and Spectators</li>
             <li>The DM views all character sheets and manages campaign members</li>
         </ul>
