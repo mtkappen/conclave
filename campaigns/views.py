@@ -900,7 +900,7 @@ def get_chat_messages(request, campaign_pk):
                 'sender_id': sender_id,
                 'sender_name': display_sender_name,
                 'real_sender_name': sender_name,
-                'character_name': display_sender_name if msg.message_type == 'IC' and character_avatar else None,
+                'character_name': display_sender_name if msg.message_type == 'IC' and display_sender_name != sender_name else None,
                 'visibility_type': msg.visibility_type,
                 'message_type': msg.message_type,
                 'is_edited': msg.is_edited,

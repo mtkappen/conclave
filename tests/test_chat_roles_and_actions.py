@@ -14,20 +14,20 @@ User = get_user_model()
 class TestChatRoleBadges:
     """Test that role badges are correctly displayed for message senders."""
 
-    def test_dm_role_shown_in_messages(self, client_auth, db_setup):
+    def test_dm_role_shown_in_messages(self, admin_client, db_setup):
         """Test that DM role badge appears in chat messages."""
         campaign = db_setup['campaign']
         
-        # Create a message from the DM
+        # Create a message from the DM (superuser)
         dm_message = ChatMessage.objects.create(
             campaign=campaign,
-            sender=db_setup['dm_user'],
+            sender=db_setup['superuser'],
             content='DM message',
             message_type='OOC_RELEVANT'
         )
         
-        response = client_auth.get(reverse('campaigns:get_chat_messages', 
-                                          kwargs={'campaign_pk': campaign.id}))
+        response = admin_client.get(reverse('campaigns:get_chat_messages', 
+                                           kwargs={'campaign_pk': campaign.id}))
         
         assert response.status_code == 200
         data = response.json()
@@ -157,13 +157,13 @@ class TestCharacterMessageDisplay:
         assert ic_msg is not None
         assert ic_msg.get('character_name') is None
 
-    def test_dm_ic_message_shows_npc_label(self, client_auth, db_setup):
+    def test_dm_ic_message_shows_npc_label(self, admin_client, db_setup):
         """Test that DM's IC messages are marked for NPC display."""
         campaign = db_setup['campaign']
         
         # Create a character sheet for the DM (representing an NPC)
         CharacterSheet.objects.create(
-            user=db_setup['dm_user'],
+            user=db_setup['superuser'],
             campaign=campaign,
             name='NPC Merchant',
             level=1,
@@ -175,13 +175,13 @@ class TestCharacterMessageDisplay:
         # Create an IC message from the DM
         npc_message = ChatMessage.objects.create(
             campaign=campaign,
-            sender=db_setup['dm_user'],
+            sender=db_setup['superuser'],
             content='Welcome to my shop!',
             message_type='IC'
         )
         
-        response = client_auth.get(reverse('campaigns:get_chat_messages', 
-                                          kwargs={'campaign_pk': campaign.id}))
+        response = admin_client.get(reverse('campaigns:get_chat_messages', 
+                                           kwargs={'campaign_pk': campaign.id}))
         
         assert response.status_code == 200
         data = response.json()
@@ -301,7 +301,7 @@ class TestMessageActionButtons:
         # Should fail (403 or redirect)
         assert response.status_code in [301, 302, 403]
 
-    def test_dm_can_delete_any_message(self, client_auth, db_setup):
+    def test_dm_can_delete_any_message(self, admin_client, db_setup):
         """Test that DMs can delete any message in their campaign."""
         campaign = db_setup['campaign']
         
@@ -313,8 +313,8 @@ class TestMessageActionButtons:
         )
         
         # DM tries to delete it
-        response = client_auth.post(reverse('campaigns:delete_chat_message', 
-                                           kwargs={'message_pk': player_message.id}))
+        response = admin_client.post(reverse('campaigns:delete_chat_message', 
+                                            kwargs={'message_pk': player_message.id}))
         
         # Should succeed for DM
         assert response.status_code == 200
@@ -327,14 +327,14 @@ class TestMessageActionButtons:
 class TestChatRoleVisibility:
     """Test that roles are correctly visible to different user types."""
 
-    def test_all_roles_visible_to_dm(self, client_auth, db_setup):
+    def test_all_roles_visible_to_dm(self, admin_client, db_setup):
         """Test that DM can see all role badges in messages."""
         campaign = db_setup['campaign']
         
         # Create messages from different roles
         ChatMessage.objects.create(
             campaign=campaign,
-            sender=db_setup['dm_user'],
+            sender=db_setup['superuser'],
             content='DM message',
             message_type='OOC_RELEVANT'
         )
@@ -346,8 +346,8 @@ class TestChatRoleVisibility:
             message_type='OOC_RELEVANT'
         )
         
-        response = client_auth.get(reverse('campaigns:get_chat_messages', 
-                                          kwargs={'campaign_pk': campaign.id}))
+        response = admin_client.get(reverse('campaigns:get_chat_messages', 
+                                           kwargs={'campaign_pk': campaign.id}))
         
         assert response.status_code == 200
         data = response.json()
@@ -362,10 +362,10 @@ class TestChatRoleVisibility:
         """Test that players can see role badges on all messages."""
         campaign = db_setup['campaign']
         
-        # Create a message from the DM
+        # Create a message from the DM (superuser)
         ChatMessage.objects.create(
             campaign=campaign,
-            sender=db_setup['dm_user'],
+            sender=db_setup['superuser'],
             content='DM message',
             message_type='OOC_RELEVANT'
         )
