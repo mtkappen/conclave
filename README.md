@@ -1,18 +1,21 @@
-# D&D Tabletop Application 🎲
+# Conclave: D&D Tabletop Application
 
 A lightweight, self-contained Python web application for small Dungeons & Dragons groups (up to 12 players + spectators). Runs on a local network without external dependencies.
 
-## ✅ Current Status: Production Ready
+---
+
+## Current Status
 
 **Version**: Phase 2 Complete  
-**Last Updated**: 2026-07-17  
-**Total Commits**: 88+ commits with active development
+**Total Commits**: 112+ commits with active development  
+**Test Coverage**: 51% overall (90% pass rate on core functionality)  
+**Last Updated**: July 2026
 
 ---
 
-## 🎯 Core Features (Fully Implemented)
+## Core Features
 
-### 🔐 User Management & Security
+### User Management & Security
 - **First-Time Admin Setup**: Automatic setup wizard when no users exist
 - **Role-Based Access Control**: Administrator, DM, Player, Spectator roles
 - **Secure Authentication**: Login/logout with password enforcement
@@ -21,7 +24,7 @@ A lightweight, self-contained Python web application for small Dungeons & Dragon
 - **Admin User Management**: Create, view, and delete user accounts
 - **Database Reset**: Complete system reset for fresh starts
 
-### 🏰 Campaign System
+### Campaign System
 - **Create & Manage Campaigns**: Full CRUD operations for campaigns
 - **Campaign Membership**: Invite players with specific roles (DM/Player/Spectator)
 - **Role Assignment**: DMs can manage member roles and remove players
@@ -29,7 +32,7 @@ A lightweight, self-contained Python web application for small Dungeons & Dragon
 - **Active Campaign Tracking**: Automatic tracking of last activity date
 - **Admin Campaign Overview**: Global view of all campaigns
 
-### 📜 Character Management
+### Character Management
 - **Full Character Sheets**: Stats, class, level, HP, AC, and descriptions
 - **Character Avatars**: Upload character images
 - **Six Ability Scores**: Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma
@@ -37,25 +40,25 @@ A lightweight, self-contained Python web application for small Dungeons & Dragon
 - **DM Roster View**: DMs can view all player characters in campaign
 - **Edit & Delete**: Players manage own characters; DMs manage all
 
-### 🎒 Inventory System
+### Inventory System
 - **Item Management**: Add items with name, quantity, weight, description
 - **Item Images**: Upload photos for inventory items
 - **Weight Tracking**: Decimal precision for encumbrance calculations
 - **Character-Specific**: Each character has independent inventory
 
-### 💬 Real-Time Chat System (Phase 2 Complete)
+### Real-Time Chat System (Phase 2 Complete)
 - **Auto-Refresh Chat**: Updates every 4 seconds via JavaScript polling
 - **Message Types**:
-  - 🗨️ **Public**: Visible to all campaign members
-  - 🔒 **DM Only**: Sender and DM only (purple border)
-  - 🤫 **Secret Whisper**: Selected recipients only, can exclude DM!
-  - 👥 **Split Group**: Visible to specific party groups (blue border)
+  - Public: Visible to all campaign members
+  - DM Only: Sender and DM only (purple border)
+  - Secret Whisper: Selected recipients only, can exclude DM!
+  - Split Group: Visible to specific party groups (blue border)
 
 - **Message Categories**:
-  - 🎭 **In-Character (IC)**: Displays character name for players
-  - 💬 **Out-of-Character Relevant**: Game-related OOC discussion
-  - ☕ **Out-of-Character Off Topic**: Casual chat
-  - 🎲 **Dice Rolls**: Automatic formatting for roll results
+  - In-Character (IC): Displays character name for players
+  - Out-of-Character Relevant: Game-related OOC discussion
+  - Out-of-Character Off Topic: Casual chat
+  - Dice Rolls: Automatic formatting for roll results
 
 - **Advanced Features**:
   - Multi-recipient whispers (hold Ctrl/Cmd to select multiple)
@@ -65,7 +68,7 @@ A lightweight, self-contained Python web application for small Dungeons & Dragon
   - Resizable chat box with persistent height preference
   - Tab filtering: All / Story-IC / Game-OOC
 
-### 🎲 Dice Roller System
+### Dice Roller System
 - **Quick Roll Buttons**: d4, d6, d8, d10, d12, d20
 - **Custom Rolls**: Configure count, type, and modifier
 - **Hidden Rolls**: DM-only visibility option (players see "???")
@@ -73,19 +76,19 @@ A lightweight, self-contained Python web application for small Dungeons & Dragon
 - **Chat Integration**: Dice results appear in chat stream
 - **Roll History**: View recent dice rolls in sidebar
 
-### 📝 Personal Tools
+### Personal Tools
 - **Personal Notebook**: Private notes per campaign (only owner can view/edit)
 - **Campaign Rule Book**: DM-editable rules visible to all members
 - **Persistent Storage**: All data saved locally with SQLite
 
-### 👁️ Admin & Moderation Features
+### Admin & Moderation Features
 - **View All Secrets**: Admin override panel to see all whispers and hidden messages
 - **User Activity Tracking**: View message counts, character counts per user
 - **Campaign Management**: Delete campaigns, manage members globally
 - **Database Reset**: Complete wipe and fresh start option
 - **Audit Trail**: Edited messages marked, sender names preserved on deletion
 
-### 🖥️ Desktop & Mobile Optimization
+### Desktop & Mobile Optimization
 - **Responsive Design**: Works on desktop, tablet, and mobile
 - **Desktop Layout**: Optimized spacing for large screens (up to 1400px)
 - **Full-Width Content**: Utilizes available screen real estate effectively
@@ -94,7 +97,7 @@ A lightweight, self-contained Python web application for small Dungeons & Dragon
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 | Component | Technology |
 |-----------|------------|
@@ -105,21 +108,28 @@ A lightweight, self-contained Python web application for small Dungeons & Dragon
 | **File Storage** | Local filesystem for images and avatars |
 | **Authentication** | Django Auth System with custom user model |
 
-## 🚀 Quick Start Guide
+---
+
+## Quick Start Guide
 
 ### First Time Setup
 
-1. **Run the setup script:**
-   ```powershell
-   .\setup.bat
+1. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
    ```
 
-2. **Start the server:**
-   ```powershell
-   .\run_server.bat
+2. **Run migrations:**
+   ```bash
+   python manage.py migrate
    ```
 
-3. **Access the application:**
+3. **Start the server:**
+   ```bash
+   python manage.py runserver 8020
+   ```
+
+4. **Access the application:**
    - Local: http://localhost:8020
    - Network: http://YOUR_IP:8020
 
@@ -127,11 +137,11 @@ A lightweight, self-contained Python web application for small Dungeons & Dragon
 
 - **Username**: `admin`
 - **Password**: `admin123`
-- ⚠️ **Important**: Change this password immediately after first login!
+- Important: Change this password immediately after first login!
 
 ---
 
-## 👥 User Roles & Permissions
+## User Roles & Permissions
 
 | Role | Permissions |
 |------|-------------|
@@ -142,16 +152,17 @@ A lightweight, self-contained Python web application for small Dungeons & Dragon
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 conclave/
 ├── campaigns/                 # Main Django app
-│   ├── models.py             # User, Campaign, Character, ChatMessage, etc.
-│   ├── views.py              # All view logic (40+ functions)
-│   ├── forms.py              # Django forms for user input
+│   ├── models.py             # User, Campaign, Character, ChatMessage, etc. (10 models)
+│   ├── views.py              # All view logic (71k+ bytes, 40+ functions)
+│   ├── forms.py              # Django forms for user input (17k+ bytes)
 │   ├── urls.py               # URL routing (30+ routes)
-│   └── middleware.py         # Custom middleware
+│   ├── middleware.py         # Custom middleware
+│   └── templatetags/         # Custom template filters (sheet_filters.py)
 ├── dnd_app/                  # Project settings
 │   ├── settings.py           # Django configuration
 │   ├── urls.py               # Main URL router
@@ -160,72 +171,108 @@ conclave/
 │   ├── base.html            # Base template with navbar & CSS
 │   ├── dashboard.html       # Main user dashboard
 │   ├── registration/        # Auth templates (login, setup, password)
-│   └── campaigns/           # Campaign-specific templates
+│   └── campaigns/           # Campaign-specific templates (14 templates)
 │       ├── detail.html      # Campaign page with chat & dice
-│       ├── chat_component.html  # Reusable chat UI
+│       ├── chat_component.html  # Reusable chat UI (52k+ bytes)
 │       ├── dice_roller.html     # Dice rolling interface
-│       └── ... (20+ templates)
+│       └── ... (character management, inventory, etc.)
 ├── static/                   # CSS, JavaScript, images
 │   └── css/                 # Stylesheets with responsive design
 ├── media/                    # User uploads
 │   ├── avatars/             # User profile pictures
 │   ├── characters/          # Character sheet images
 │   └── inventory/           # Item images
-├── db.sqlite3               # SQLite database (auto-created)
+├── tests/                    # Pytest test suite (108 tests)
+│   ├── test_basic_setup.py  # Infrastructure validation
+│   ├── test_authentication.py
+│   ├── test_campaigns.py
+│   ├── test_character_sheets.py
+│   ├── test_chat_and_dice.py
+│   └── ... (9 test files total)
+├── db.sqlite3               # SQLite database (auto-created, not in git)
 ├── manage.py                # Django management script
 ├── requirements.txt         # Python dependencies
-├── setup.bat               # One-click setup script
-└── run_server.bat          # One-click server startup
+└── run_tests.sh             # Test runner script
 ```
 
 ---
 
-## 📊 Development Status
+## Development Status
 
-### ✅ Completed Features
-- **Phase 1**: User auth, campaigns, characters, inventory, role management ✓
-- **Phase 2**: Real-time chat, visibility controls, dice roller, desktop optimization ✓
-- **Security**: Password enforcement, admin user management, database reset ✓
-- **Privacy**: Multi-recipient whispers, secret messages, admin override panel ✓
-- **UX**: Resizable chat, responsive design, persistent preferences ✓
+### Completed Features
+- **Phase 1**: User auth, campaigns, characters, inventory, role management
+- **Phase 2**: Real-time chat, visibility controls, dice roller, desktop optimization
+- **Security**: Password enforcement, admin user management, database reset
+- **Privacy**: Multi-recipient whispers, secret messages, admin override panel
+- **UX**: Resizable chat, responsive design, persistent preferences
 
-### 📈 Project Metrics
-- **Total Commits**: 88+
+### Project Metrics
+- **Total Commits**: 112+
 - **Lines of Code**: ~6,000+ (Python + templates)
 - **Views Implemented**: 40+
 - **URL Routes**: 30+
 - **Models**: 10 (User, Campaign, Character, ChatMessage, DiceRollLog, etc.)
+- **Templates**: 25+ HTML files
+- **Test Suite**: 108 tests (97 passing, 11 known issues)
+
+### Test Coverage Summary
+
+| Category | Status | Pass Rate |
+|----------|--------|-----------|
+| Basic Setup | Complete | 100% |
+| Authentication | Complete | 100% |
+| Campaigns | Complete | 100% |
+| Characters | Complete | 100% |
+| URL Routing | Complete | 100% |
+| Admin Features | Partial | 72% |
+| Chat & Dice | In Progress | 21% |
+
+**Overall Coverage**: 51% (views at 57%, forms at 62%)
 
 ---
 
-## 🌐 Network Access Setup
+## Known Issues
+
+See the following documentation for current bug tracking:
+- [BUG_FIXES.md](BUG_FIXES.md) - Fixed and open bugs
+- [TEST_SUITE_ISSUES.md](TEST_SUITE_ISSUES.md) - Test suite issues
+- [todo.md](todo.md) - Current to-do list
+
+### Active Issues Summary
+1. **Chat Message Type Editing** - Rapid keyboard-driven full-screen mode (low priority)
+2. **Secret Message Recipient Display** - Show recipients in italics for whispers
+3. **Test Suite Gaps** - Chat/dice views need JSON handling improvements
+
+---
+
+## Network Access Setup
 
 To allow other computers on your network to access the app:
 
 1. **Find your IP address:**
-   ```powershell
+   ```bash
    ipconfig  # Look for IPv4 Address (e.g., 192.168.1.100)
    ```
 
 2. **Share with players:** `http://YOUR_IP:8020`
 
-3. **Windows Firewall**: Allow Python connections when prompted, or create inbound rule for port 8020
+3. **Firewall**: Allow Python connections when prompted, or create inbound rule for port 8020
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Port Already in Use?
-Change the port in `run_server.bat`:
-```powershell
+Change the port in your run command:
+```bash
 python manage.py runserver 8021
 ```
 
 ### Database Errors?
 Reset the database:
-```powershell
+```bash
 # Delete db.sqlite3
-del db.sqlite3
+rm db.sqlite3
 # Run migrations
 python manage.py migrate
 # Or use the admin database reset feature in-app
@@ -237,33 +284,45 @@ Ensure the `media/` folder has write permissions for your user account.
 ### Chat Not Updating?
 - Check browser console for JavaScript errors
 - Verify auto-refresh is working (messages should update every 4 seconds)
-- Try hard refresh: `Ctrl + F5`
+- Try hard refresh: Ctrl + F5
 
 ---
 
-## 🐛 Known Issues
+## Running Tests
 
-See [known_bugs.md](known_bugs.md) for current tracking of bugs and planned fixes.
+```bash
+# Set Python path (Windows PowerShell)
+$env:PYTHONPATH = "."
+
+# Run all tests
+python tests/run_tests.py
+
+# Or use pytest directly
+pytest tests/ -v
+
+# With coverage report
+pytest --cov=campaigns --cov-report=html tests/
+```
 
 ---
 
-## 🔒 Security Notes
+## Security Notes
 
 - **Local Network Only**: Not designed for internet deployment
-- **Admin Override**: Global admins can view all private messages (use responsibly)
+- **Admin Override**: Global admins can view all private messages via `?admin_override=1` (use responsibly)
 - **Password Requirements**: Minimum 8 characters, confirmation required
 - **CSRF Protection**: All forms include Django CSRF tokens
 - **Role Validation**: Server-side permission checks on all views
 
 ---
 
-## 📄 License
+## License
 
 This is a personal project for local D&D groups. Not for commercial use.
 
 ---
 
-## 🎮 User Guide Highlights
+## User Guide Highlights
 
 ### Creating Your First Campaign
 1. Log in as admin or DM
@@ -278,7 +337,7 @@ This is a personal project for local D&D groups. Not for commercial use.
 4. Player receives access immediately
 
 ### Sending Secret Messages
-1. In chat, select "🤫 Secret Whisper" from visibility dropdown
+1. In chat, select "Secret Whisper" from visibility dropdown
 2. Hold Ctrl/Cmd and click to select multiple recipients
 3. Type message and send
 4. Only you and selected recipients can see it (not even DM!)
@@ -291,6 +350,6 @@ This is a personal project for local D&D groups. Not for commercial use.
 
 ---
 
-**Happy Adventuring!** 🐉⚔️🛡️
+**Happy Adventuring!**
 
 *Built with Django for tabletop gaming groups.*
